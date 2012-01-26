@@ -17,9 +17,9 @@ import Network.Socket (Socket, SockAddr(..), PortNumber, connect)
 import Network.Socks5.Command
 import Network.Socks5.Types
 
-withSocks socket sockaddr f = do
-	connect socket sockaddr
-	r <- socks5Establish socket [SocksMethodNone]
+withSocks sock sockaddr f = do
+	connect sock sockaddr
+	r <- socks5Establish sock [SocksMethodNone]
 	when (r == SocksMethodNotAcceptable) $ error "cannot connect with no socks method of authentication"
 	f
 
@@ -30,15 +30,15 @@ withSocks socket sockaddr f = do
 --
 -- |socket|-----sockServer----->|server|----destAddr----->|destination|
 socksConnectAddr :: Socket -> SockAddr -> SockAddr -> IO ()
-socksConnectAddr socket sockserver destaddr = withSocks socket sockserver $ do
+socksConnectAddr sock sockserver destaddr = withSocks sock sockserver $ do
 	case destaddr of
-		SockAddrInet p h      -> socks5ConnectIPV4 socket h p >> return ()
-		SockAddrInet6 p _ h _ -> socks5ConnectIPV6 socket h p >> return ()
+		SockAddrInet p h      -> socks5ConnectIPV4 sock h p >> return ()
+		SockAddrInet6 p _ h _ -> socks5ConnectIPV6 sock h p >> return ()
 		SockAddrUnix _        -> error "unsupported unix sockaddr type"
 
 -- | connect a new socket to the socks server, and connect the stream to a FQDN
 -- resolved on the server side.
 socksConnectName :: Socket -> SockAddr -> String -> PortNumber -> IO ()
-socksConnectName socket sockserver destination port = withSocks socket sockserver $ do
-	_ <- socks5ConnectDomainName socket destination port
+socksConnectName sock sockserver destination port = withSocks sock sockserver $ do
+	_ <- socks5ConnectDomainName sock destination port
 	return ()
