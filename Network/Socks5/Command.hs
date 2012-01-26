@@ -81,4 +81,4 @@ runGetDone getter ioget = ioget >>= return . runGetPartial getter >>= r where
 	r (Partial cont) = ioget >>= r . cont
 	r (Done a b)
 		| not $ B.null b = error "got too many bytes while receiving data"
-		| otherwise      = putStrLn (show a) >> return a
+		| otherwise      = return a
