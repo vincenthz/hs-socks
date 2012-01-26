@@ -48,7 +48,7 @@ socksConnectName sock sockserver destination port = withSocks sock sockserver $ 
 	_ <- socks5ConnectDomainName sock destination port
 	return ()
 
--- | similar to Network connectTo except it takes a portNumber for .
+-- | similar to Network connectTo but use a socks proxy.
 socksConnectTo :: String -> PortID -> String -> PortID -> IO Handle
 socksConnectTo sockshost socksport desthost destport = do
 	sport <- resolvePortID socksport
