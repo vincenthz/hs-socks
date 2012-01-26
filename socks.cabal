@@ -24,3 +24,7 @@ Library
                      Network.Socks5.Types
                      Network.Socks5.Command
   ghc-options:       -Wall -fno-warn-missing-signatures
+
+source-repository head
+  type: git
+  location: git://github.com/vincenthz/hs-socks
