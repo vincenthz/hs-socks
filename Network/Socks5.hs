@@ -10,12 +10,17 @@
 module Network.Socks5
 	( socksConnectAddr
 	, socksConnectName
+	, socksConnectTo
 	) where
 
 import Control.Monad
-import Network.Socket (Socket, SockAddr(..), PortNumber, connect)
+import Control.Exception
+import Network.Socket
+import Network.BSD
 import Network.Socks5.Command
 import Network.Socks5.Types
+import Network
+import System.IO
 
 withSocks sock sockaddr f = do
 	connect sock sockaddr
@@ -42,3 +47,22 @@ socksConnectName :: Socket -> SockAddr -> String -> PortNumber -> IO ()
 socksConnectName sock sockserver destination port = withSocks sock sockserver $ do
 	_ <- socks5ConnectDomainName sock destination port
 	return ()
+
+-- | similar to Network connectTo except it takes a portNumber for .
+socksConnectTo :: String -> PortID -> String -> PortID -> IO Handle
+socksConnectTo sockshost socksport desthost destport = do
+	sport <- resolvePortID socksport
+	dport <- resolvePortID destport
+
+	proto <- getProtocolNumber "tcp"
+	bracketOnError (socket AF_INET Stream proto) sClose (go sport dport)
+	where
+		go sport dport sock = do
+			he <- getHostByName sockshost
+			let sockaddr = SockAddrInet sport (hostAddress he)
+			socksConnectName sock sockaddr desthost dport
+			socketToHandle sock ReadWriteMode
+
+		resolvePortID (Service serv) = getServicePortNumber serv
+		resolvePortID (PortNumber n) = return n
+		resolvePortID _              = error "unsupported unix PortID"
