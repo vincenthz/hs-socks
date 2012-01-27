@@ -1,5 +1,5 @@
 Name:                socks
-Version:             0.3.0
+Version:             0.4.0
 Description:         Socks proxy (version 5) implementation.
 License:             BSD3
 License-file:        LICENSE
