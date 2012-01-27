@@ -8,9 +8,12 @@
 -- Portability : unknown
 --
 module Network.Socks5
-	( socksConnectAddr
+	( SocksConf(..)
+	, defaultSocksConf
+	, socksConnectAddr
 	, socksConnectName
 	, socksConnectTo
+	, socksConnectWith
 	) where
 
 import Control.Monad
@@ -21,6 +24,19 @@ import Network.Socks5.Command
 import Network.Socks5.Types
 import Network
 import System.IO
+
+-- | SOCKS configuration structure.
+-- this structure will be extended in future to support authentification.
+-- use defaultSocksConf to create new record.
+data SocksConf = SocksConf
+	{ socksHost    :: String -- ^ SOCKS host.
+	, socksPort    :: PortNumber -- ^ SOCKS port.
+	, socksVersion :: Int        -- ^ SOCKS version to use, only 5 supported for now.
+	}
+
+-- | defaultSocksConf create a new record, making sure
+-- API remains compatible when the record is extended.
+defaultSocksConf host port = SocksConf host port 5
 
 withSocks sock sockaddr f = do
 	connect sock sockaddr
@@ -66,3 +82,8 @@ socksConnectTo sockshost socksport desthost destport = do
 		resolvePortID (Service serv) = getServicePortNumber serv
 		resolvePortID (PortNumber n) = return n
 		resolvePortID _              = error "unsupported unix PortID"
+
+-- | like socksConnectTo but specify the socks configuration directly.
+socksConnectWith :: SocksConf -> String -> PortID -> IO Handle
+socksConnectWith socksConf =
+	socksConnectTo (socksHost socksConf) (PortNumber $ socksPort socksConf)
