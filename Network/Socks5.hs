@@ -29,7 +29,7 @@ import System.IO
 -- this structure will be extended in future to support authentification.
 -- use defaultSocksConf to create new record.
 data SocksConf = SocksConf
-	{ socksHost    :: String -- ^ SOCKS host.
+	{ socksHost    :: String     -- ^ SOCKS host.
 	, socksPort    :: PortNumber -- ^ SOCKS port.
 	, socksVersion :: Int        -- ^ SOCKS version to use, only 5 supported for now.
 	}
@@ -64,26 +64,29 @@ socksConnectName sock sockserver destination port = withSocks sock sockserver $ 
 	_ <- socks5ConnectDomainName sock destination port
 	return ()
 
--- | similar to Network connectTo but use a socks proxy.
+-- | create a new socket and connect in to a destination through the specified
+-- SOCKS configuration.
+socksConnectWith :: SocksConf -- ^ SOCKS configuration
+                 -> String    -- ^ destination hostname
+                 -> PortID    -- ^ destination port
+                 -> IO Socket
+socksConnectWith sockConf desthost destport = do
+	dport <- resolvePortID destport
+	proto <- getProtocolNumber "tcp"
+	bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
+		he <- getHostByName $ socksHost sockConf
+		let sockaddr = SockAddrInet (socksPort sockConf) (hostAddress he)
+		socksConnectName sock sockaddr desthost dport
+		return sock
+
+-- | similar to Network connectTo but use a socks proxy with default socks configuration.
 socksConnectTo :: String -> PortID -> String -> PortID -> IO Handle
 socksConnectTo sockshost socksport desthost destport = do
 	sport <- resolvePortID socksport
-	dport <- resolvePortID destport
+	let socksConf = defaultSocksConf sockshost sport
+	sock <- socksConnectWith socksConf desthost destport
+	socketToHandle sock ReadWriteMode
 
-	proto <- getProtocolNumber "tcp"
-	bracketOnError (socket AF_INET Stream proto) sClose (go sport dport)
-	where
-		go sport dport sock = do
-			he <- getHostByName sockshost
-			let sockaddr = SockAddrInet sport (hostAddress he)
-			socksConnectName sock sockaddr desthost dport
-			socketToHandle sock ReadWriteMode
-
-		resolvePortID (Service serv) = getServicePortNumber serv
-		resolvePortID (PortNumber n) = return n
-		resolvePortID _              = error "unsupported unix PortID"
-
--- | like socksConnectTo but specify the socks configuration directly.
-socksConnectWith :: SocksConf -> String -> PortID -> IO Handle
-socksConnectWith socksConf =
-	socksConnectTo (socksHost socksConf) (PortNumber $ socksPort socksConf)
+resolvePortID (Service serv) = getServicePortNumber serv
+resolvePortID (PortNumber n) = return n
+resolvePortID _              = error "unsupported unix PortID"
