@@ -55,7 +55,7 @@ socksConnectAddr sock sockserver destaddr = withSocks sock sockserver $ do
 	case destaddr of
 		SockAddrInet p h      -> socks5ConnectIPV4 sock h p >> return ()
 		SockAddrInet6 p _ h _ -> socks5ConnectIPV6 sock h p >> return ()
-		SockAddrUnix _        -> error "unsupported unix sockaddr type"
+		_                     -> error "unsupported unix sockaddr type"
 
 -- | connect a new socket to the socks server, and connect the stream to a FQDN
 -- resolved on the server side.
