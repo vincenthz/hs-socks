@@ -17,7 +17,7 @@ data-files:          README.md, Example.hs
 Library
   Build-Depends:     base >= 3 && < 5
                    , bytestring
-                   , cereal >= 0.3
+                   , cereal >= 0.3.1
                    , network >= 2.3
   Exposed-modules:   Network.Socks5
   Other-modules:     Network.Socks5.Wire
