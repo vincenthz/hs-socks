@@ -7,6 +7,19 @@
 -- Stability   : experimental
 -- Portability : unknown
 --
+-- This is an implementation of SOCKS5 as defined in RFC 1928
+--
+-- In Wikipedia's words:
+--
+--   SOCKet Secure (SOCKS) is an Internet protocol that routes network packets
+--   between a client and server through a proxy server. SOCKS5 additionally
+--   provides authentication so only authorized users may access a server.
+--   Practically, a SOCKS server will proxy TCP connections to an arbitrary IP
+--   address as well as providing a means for UDP packets to be forwarded.
+--
+-- BIND and UDP ASSOCIATE messages are not implemented.
+-- However main usage of SOCKS is covered in this implementation.
+--
 module Network.Socks5
     ( module Network.Socks5.Conf
     , socksConnectAddr
