@@ -10,7 +10,7 @@ module Network.Socks5.Types
     , SocksCommand(..)
     , SocksMethod(..)
     , SocksHostAddress(..)
-    , SocksAddr
+    , SocksAddress(..)
     , SocksReply(..)
     , SocksVersionNotSupported(..)
     , SocksError(..)
@@ -19,7 +19,7 @@ module Network.Socks5.Types
 import Data.ByteString (ByteString)
 import Data.Word
 import Data.Data
-import Network.Socket (HostAddress, HostAddress6)
+import Network.Socket (HostAddress, HostAddress6, PortNumber)
 import Control.Exception
 
 -- | Socks Version
@@ -47,8 +47,8 @@ data SocksHostAddress =
     | SocksAddrIPV6 HostAddress6
     deriving (Show,Eq)
 
-{-# DEPRECATED SocksAddr "use SocksHostAddress instead" #-}
-type SocksAddr = SocksHostAddress
+data SocksAddress = SocksAddress SocksHostAddress PortNumber
+    deriving (Show,Eq)
 
 data SocksReply =
       SocksReplySuccess

@@ -22,6 +22,8 @@
 --
 module Network.Socks5
     ( module Network.Socks5.Conf
+    , socksConnectWithSocket
+    , socksConnect
     , socksConnectAddr
     , socksConnectName
     , socksConnectTo
@@ -30,6 +32,7 @@ module Network.Socks5
 
 import Control.Monad
 import Control.Exception
+import qualified Data.ByteString.Char8 as BC
 import Network.Socket
 import Network.BSD
 import qualified Network.Socks5.Command as Cmd
@@ -39,11 +42,32 @@ import Network.Socks5.Lowlevel
 import Network
 import System.IO
 
-withSocks sock sockaddr f = do
-    connect sock sockaddr
+-- | connect a user specified new socket to the socks server,
+-- and connect the stream on the server side to the 'SockAddress' specified.
+--
+-- |socket|-----sockServer----->|server|----destAddr----->|destination|
+--
+socksConnectWithSocket :: Socket       -- ^ Socket to use.
+                       -> SocksConf    -- ^ SOCKS configuration for the server.
+                       -> SocksAddress -- ^ SOCKS Address to connect to.
+                       -> IO (SocksHostAddress, PortNumber)
+socksConnectWithSocket sock serverConf destAddr = do
+    serverAddr <- resolveToSockAddr (socksServer serverConf)
+    connect sock serverAddr
     r <- Cmd.establish sock [SocksMethodNone]
     when (r == SocksMethodNotAcceptable) $ error "cannot connect with no socks method of authentication"
-    f
+    Cmd.rpc_ sock (Connect destAddr)
+
+-- | connect a new socket to a socks server and connect the stream on the
+-- server side to the 'SocksAddress' specified.
+socksConnect :: SocksConf    -- ^ SOCKS configuration for the server.
+             -> SocksAddress -- ^ SOCKS Address to connect to.
+             -> IO (Socket, (SocksHostAddress, PortNumber))
+socksConnect serverConf destAddr =
+    getProtocolNumber "tcp" >>= \proto ->
+    bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
+        ret <- socksConnectWithSocket sock serverConf destAddr
+        return (sock, ret)
 
 -- | connect a new socket to the socks server, and connect the stream on the server side
 -- to the sockaddr specified. the sockaddr need to be SockAddrInet or SockAddrInet6.
@@ -51,19 +75,22 @@ withSocks sock sockaddr f = do
 -- a unix sockaddr will raises an exception.
 --
 -- |socket|-----sockServer----->|server|----destAddr----->|destination|
+{-# DEPRECATED socksConnectAddr "use socksConnectWithSocket" #-}
 socksConnectAddr :: Socket -> SockAddr -> SockAddr -> IO ()
-socksConnectAddr sock sockserver destaddr = withSocks sock sockserver $ do
-    case destaddr of
-        SockAddrInet p h      -> Cmd.connectIPV4 sock h p >> return ()
-        SockAddrInet6 p _ h _ -> Cmd.connectIPV6 sock h p >> return ()
-        _                     -> error "unsupported unix sockaddr type"
+socksConnectAddr sock sockserver destaddr =
+    socksConnectWithSocket sock
+                           (defaultSocksConfFromSockAddr sockserver)
+                           (socksServer $ defaultSocksConfFromSockAddr destaddr) >>
+    return ()
 
 -- | connect a new socket to the socks server, and connect the stream to a FQDN
 -- resolved on the server side.
 socksConnectName :: Socket -> SockAddr -> String -> PortNumber -> IO ()
-socksConnectName sock sockserver destination port = withSocks sock sockserver $ do
-    _ <- Cmd.connectDomainName sock destination port
-    return ()
+socksConnectName sock sockserver destination port = do
+    socksConnectWithSocket sock
+                           (defaultSocksConfFromSockAddr sockserver)
+                           (SocksAddress (SocksAddrDomainName $ BC.pack destination) port)
+    >> return ()
 
 -- | create a new socket and connect in to a destination through the specified
 -- SOCKS configuration.
@@ -75,7 +102,7 @@ socksConnectWith socksConf desthost destport = do
     dport <- resolvePortID destport
     proto <- getProtocolNumber "tcp"
     bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
-        sockaddr <- resolveToSockAddr (socksHost socksConf) (socksPort socksConf)
+        sockaddr <- resolveToSockAddr (socksServer socksConf)
         socksConnectName sock sockaddr desthost dport
         return sock
 
