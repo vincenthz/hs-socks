@@ -22,6 +22,7 @@ Library
   Exposed-modules:   Network.Socks5
   Other-modules:     Network.Socks5.Wire
                      Network.Socks5.Types
+                     Network.Socks5.Conf
                      Network.Socks5.Command
   ghc-options:       -Wall -fno-warn-missing-signatures
 

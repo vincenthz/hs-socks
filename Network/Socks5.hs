@@ -8,8 +8,7 @@
 -- Portability : unknown
 --
 module Network.Socks5
-    ( SocksConf(..)
-    , defaultSocksConf
+    ( module Network.Socks5.Conf
     , socksConnectAddr
     , socksConnectName
     , socksConnectTo
@@ -21,22 +20,10 @@ import Control.Exception
 import Network.Socket
 import Network.BSD
 import Network.Socks5.Command
+import Network.Socks5.Conf
 import Network.Socks5.Types
 import Network
 import System.IO
-
--- | SOCKS configuration structure.
--- this structure will be extended in future to support authentification.
--- use defaultSocksConf to create new record.
-data SocksConf = SocksConf
-    { socksHost    :: String     -- ^ SOCKS host.
-    , socksPort    :: PortNumber -- ^ SOCKS port.
-    , socksVersion :: Int        -- ^ SOCKS version to use, only 5 supported for now.
-    }
-
--- | defaultSocksConf create a new record, making sure
--- API remains compatible when the record is extended.
-defaultSocksConf host port = SocksConf host port 5
 
 withSocks sock sockaddr f = do
     connect sock sockaddr
