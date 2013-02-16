@@ -8,12 +8,12 @@
 -- Portability : unknown
 --
 module Network.Socks5.Command
-    ( socks5Establish
-    , socks5ConnectIPV4
-    , socks5ConnectIPV6
-    , socks5ConnectDomainName
+    ( establish
+    , connectIPV4
+    , connectIPV6
+    , connectDomainName
     -- * lowlevel interface
-    , socks5Rpc
+    , rpc
     ) where
 
 import Control.Applicative
@@ -29,13 +29,13 @@ import Network.Socket.ByteString
 import Network.Socks5.Types
 import Network.Socks5.Wire
 
-socks5Establish :: Socket -> [SocksMethod] -> IO SocksMethod
-socks5Establish socket methods = do
+establish :: Socket -> [SocksMethod] -> IO SocksMethod
+establish socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
 
-socks5ConnectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
-socks5ConnectIPV4 socket hostaddr port = onReply <$> socks5Rpc socket request
+connectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
+connectIPV4 socket hostaddr port = onReply <$> rpc socket request
     where
         request = SocksRequest
             { requestCommand  = SocksCommandConnect
@@ -46,8 +46,8 @@ socks5ConnectIPV4 socket hostaddr port = onReply <$> socks5Rpc socket request
         onReply (SocksAddrIPV4 h, p) = (h, p)
         onReply _                    = error "ipv4 requested, got something different"
 
-socks5ConnectIPV6 :: Socket -> HostAddress6 -> PortNumber -> IO (HostAddress6, PortNumber)
-socks5ConnectIPV6 socket hostaddr6 port = onReply <$> socks5Rpc socket request
+connectIPV6 :: Socket -> HostAddress6 -> PortNumber -> IO (HostAddress6, PortNumber)
+connectIPV6 socket hostaddr6 port = onReply <$> rpc socket request
     where
         request = SocksRequest
             { requestCommand  = SocksCommandConnect
@@ -59,15 +59,15 @@ socks5ConnectIPV6 socket hostaddr6 port = onReply <$> socks5Rpc socket request
 
 -- TODO: FQDN should only be ascii, maybe putting a "fqdn" data type
 -- in front to make sure and make the BC.pack safe.
-socks5ConnectDomainName :: Socket -> String -> PortNumber -> IO (SocksAddr, PortNumber)
-socks5ConnectDomainName socket fqdn port = socks5Rpc socket $ SocksRequest
+connectDomainName :: Socket -> String -> PortNumber -> IO (SocksAddr, PortNumber)
+connectDomainName socket fqdn port = rpc socket $ SocksRequest
     { requestCommand  = SocksCommandConnect
     , requestDstAddr  = SocksAddrDomainName $ BC.pack fqdn
     , requestDstPort  = fromIntegral port
     }
 
-socks5Rpc :: Socket -> SocksRequest -> IO (SocksAddr, PortNumber)
-socks5Rpc socket req = do
+rpc :: Socket -> SocksRequest -> IO (SocksAddr, PortNumber)
+rpc socket req = do
     sendAll socket (encode req)
     onReply <$> runGetDone get (recv socket 4096)
     where onReply res@(responseReply -> reply)
