@@ -33,14 +33,14 @@ data SocksHelloResponse = SocksHelloResponse { getSocksHelloResponseMethod :: So
 -- | Define a SOCKS requests
 data SocksRequest = SocksRequest
     { requestCommand  :: SocksCommand
-    , requestDstAddr  :: SocksAddr
+    , requestDstAddr  :: SocksHostAddress
     , requestDstPort  :: PortNumber
     } deriving (Show,Eq)
 
 -- | Define a SOCKS response
 data SocksResponse = SocksResponse
     { responseReply    :: SocksReply
-    , responseBindAddr :: SocksAddr
+    , responseBindAddr :: SocksHostAddress
     , responseBindPort :: PortNumber
     } deriving (Show,Eq)
 

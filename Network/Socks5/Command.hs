@@ -36,7 +36,7 @@ establish socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
 
-data Connect = Connect SocksAddr PortNumber
+data Connect = Connect SocksHostAddress PortNumber
              deriving (Show,Eq)
 
 class Command a where
@@ -69,10 +69,10 @@ connectIPV6 socket hostaddr6 port = onReply <$> rpc socket (Connect (SocksAddrIP
 
 -- TODO: FQDN should only be ascii, maybe putting a "fqdn" data type
 -- in front to make sure and make the BC.pack safe.
-connectDomainName :: Socket -> String -> PortNumber -> IO (SocksAddr, PortNumber)
+connectDomainName :: Socket -> String -> PortNumber -> IO (SocksHostAddress, PortNumber)
 connectDomainName socket fqdn port = rpc socket $ Connect (SocksAddrDomainName $ BC.pack fqdn) port
 
-rpc :: Command a => Socket -> a -> IO (SocksAddr, PortNumber)
+rpc :: Command a => Socket -> a -> IO (SocksHostAddress, PortNumber)
 rpc socket req = do
     sendAll socket (encode $ toRequest req)
     onReply <$> runGetDone get (recv socket 4096)

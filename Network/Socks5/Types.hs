@@ -6,9 +6,11 @@
 -- Stability   : experimental
 -- Portability : unknown
 module Network.Socks5.Types
-    ( SocksCommand(..)
+    ( SocksVersion(..)
+    , SocksCommand(..)
     , SocksMethod(..)
-    , SocksAddr(..)
+    , SocksHostAddress(..)
+    , SocksAddr
     , SocksReply(..)
     , SocksVersionNotSupported(..)
     , SocksError(..)
@@ -19,6 +21,10 @@ import Data.Word
 import Data.Data
 import Network.Socket (HostAddress, HostAddress6)
 import Control.Exception
+
+-- | Socks Version
+data SocksVersion = SocksVer5
+                  deriving (Show,Eq)
 
 data SocksCommand =
       SocksCommandConnect
@@ -35,11 +41,14 @@ data SocksMethod =
     | SocksMethodNotAcceptable
     deriving (Show,Eq,Ord)
 
-data SocksAddr =
+data SocksHostAddress =
       SocksAddrIPV4 HostAddress
     | SocksAddrDomainName ByteString
     | SocksAddrIPV6 HostAddress6
     deriving (Show,Eq)
+
+{-# DEPRECATED SocksAddr "use SocksHostAddress instead" #-}
+type SocksAddr = SocksHostAddress
 
 data SocksReply =
       SocksReplySuccess

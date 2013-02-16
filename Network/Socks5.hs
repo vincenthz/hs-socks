@@ -22,6 +22,7 @@ import Network.BSD
 import qualified Network.Socks5.Command as Cmd
 import Network.Socks5.Conf
 import Network.Socks5.Types
+import Network.Socks5.Lowlevel
 import Network
 import System.IO
 
@@ -57,12 +58,11 @@ socksConnectWith :: SocksConf -- ^ SOCKS configuration
                  -> String    -- ^ destination hostname
                  -> PortID    -- ^ destination port
                  -> IO Socket
-socksConnectWith sockConf desthost destport = do
+socksConnectWith socksConf desthost destport = do
     dport <- resolvePortID destport
     proto <- getProtocolNumber "tcp"
     bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
-        he <- getHostByName $ socksHost sockConf
-        let sockaddr = SockAddrInet (socksPort sockConf) (hostAddress he)
+        sockaddr <- resolveToSockAddr (socksHost socksConf) (socksPort socksConf)
         socksConnectName sock sockaddr desthost dport
         return sock
 
