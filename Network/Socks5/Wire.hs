@@ -21,18 +21,23 @@ import Network.Socket (PortNumber)
 
 import Network.Socks5.Types
 
+-- | Initial message sent by client with the list of authentification methods supported
 data SocksHello = SocksHello { getSocksHelloMethods :: [SocksMethod] }
     deriving (Show,Eq)
 
+-- | Initial message send by server in return from Hello, with the
+-- server chosen method of authentication
 data SocksHelloResponse = SocksHelloResponse { getSocksHelloResponseMethod :: SocksMethod }
     deriving (Show,Eq)
 
+-- | Define a SOCKS requests
 data SocksRequest = SocksRequest
     { requestCommand  :: SocksCommand
     , requestDstAddr  :: SocksAddr
     , requestDstPort  :: PortNumber
     } deriving (Show,Eq)
 
+-- | Define a SOCKS response
 data SocksResponse = SocksResponse
     { responseReply    :: SocksReply
     , responseBindAddr :: SocksAddr
@@ -103,4 +108,3 @@ instance Serialize SocksResponse where
         putAddr $ responseBindAddr req
         putWord16be $ fromIntegral $ responseBindPort req
     get = getWord8 >>= getSocksResponse
-
