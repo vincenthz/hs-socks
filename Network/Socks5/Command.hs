@@ -9,6 +9,8 @@
 --
 module Network.Socks5.Command
     ( establish
+    , Connect(..)
+    , Command(..)
     , connectIPV4
     , connectIPV6
     , connectDomainName
@@ -34,41 +36,45 @@ establish socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
 
-connectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
-connectIPV4 socket hostaddr port = onReply <$> rpc socket request
-    where
-        request = SocksRequest
+data Connect = Connect SocksAddr PortNumber
+             deriving (Show,Eq)
+
+class Command a where
+    toRequest   :: a -> SocksRequest
+    fromRequest :: SocksRequest -> Maybe a
+
+instance Command SocksRequest where
+    toRequest   = id
+    fromRequest = Just
+
+instance Command Connect where
+    toRequest (Connect socksaddr port) = SocksRequest
             { requestCommand  = SocksCommandConnect
-            , requestDstAddr  = SocksAddrIPV4 hostaddr
+            , requestDstAddr  = socksaddr
             , requestDstPort  = fromIntegral port
             }
+    fromRequest req
+        | requestCommand req /= SocksCommandConnect = Nothing
+        | otherwise = Just $ Connect (requestDstAddr req) (requestDstPort req)
 
-        onReply (SocksAddrIPV4 h, p) = (h, p)
-        onReply _                    = error "ipv4 requested, got something different"
+connectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
+connectIPV4 socket hostaddr port = onReply <$> rpc socket (Connect (SocksAddrIPV4 hostaddr) port)
+    where onReply (SocksAddrIPV4 h, p) = (h, p)
+          onReply _                    = error "ipv4 requested, got something different"
 
 connectIPV6 :: Socket -> HostAddress6 -> PortNumber -> IO (HostAddress6, PortNumber)
-connectIPV6 socket hostaddr6 port = onReply <$> rpc socket request
-    where
-        request = SocksRequest
-            { requestCommand  = SocksCommandConnect
-            , requestDstAddr  = SocksAddrIPV6 hostaddr6
-            , requestDstPort  = fromIntegral port
-            }
-        onReply (SocksAddrIPV6 h, p) = (h, p)
-        onReply _                    = error "ipv6 requested, got something different"
+connectIPV6 socket hostaddr6 port = onReply <$> rpc socket (Connect (SocksAddrIPV6 hostaddr6) port)
+    where onReply (SocksAddrIPV6 h, p) = (h, p)
+          onReply _                    = error "ipv6 requested, got something different"
 
 -- TODO: FQDN should only be ascii, maybe putting a "fqdn" data type
 -- in front to make sure and make the BC.pack safe.
 connectDomainName :: Socket -> String -> PortNumber -> IO (SocksAddr, PortNumber)
-connectDomainName socket fqdn port = rpc socket $ SocksRequest
-    { requestCommand  = SocksCommandConnect
-    , requestDstAddr  = SocksAddrDomainName $ BC.pack fqdn
-    , requestDstPort  = fromIntegral port
-    }
+connectDomainName socket fqdn port = rpc socket $ Connect (SocksAddrDomainName $ BC.pack fqdn) port
 
-rpc :: Socket -> SocksRequest -> IO (SocksAddr, PortNumber)
+rpc :: Command a => Socket -> a -> IO (SocksAddr, PortNumber)
 rpc socket req = do
-    sendAll socket (encode req)
+    sendAll socket (encode $ toRequest req)
     onReply <$> runGetDone get (recv socket 4096)
     where onReply res@(responseReply -> reply)
                 | reply /= SocksReplySuccess = throw $ SocksError reply
