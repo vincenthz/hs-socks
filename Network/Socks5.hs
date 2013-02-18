@@ -21,9 +21,18 @@
 -- However main usage of SOCKS is covered in this implementation.
 --
 module Network.Socks5
-    ( module Network.Socks5.Conf
+    (
+    -- * Types
+      SocksAddress(..)
+    , SocksHostAddress(..)
+    , SocksReply(..)
+    , SocksError(..)
+    -- * Configuration
+    , module Network.Socks5.Conf
+    -- * Methods
     , socksConnectWithSocket
     , socksConnect
+    -- * Variants
     , socksConnectAddr
     , socksConnectName
     , socksConnectTo
