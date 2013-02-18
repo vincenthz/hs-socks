@@ -20,6 +20,7 @@ Library
                    , cereal >= 0.3.1
                    , network >= 2.3
   Exposed-modules:   Network.Socks5
+                     Network.Socks5.Lowlevel
   Other-modules:     Network.Socks5.Wire
                      Network.Socks5.Types
                      Network.Socks5.Conf
