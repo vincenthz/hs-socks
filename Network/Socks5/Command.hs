@@ -17,6 +17,8 @@ module Network.Socks5.Command
     -- * lowlevel interface
     , rpc
     , rpc_
+    , sendSerialized
+    , waitSerialized
     ) where
 
 import Control.Applicative
@@ -72,9 +74,15 @@ connectIPV6 socket hostaddr6 port = onReply <$> rpc_ socket (Connect $ SocksAddr
 connectDomainName :: Socket -> String -> PortNumber -> IO (SocksHostAddress, PortNumber)
 connectDomainName socket fqdn port = rpc_ socket $ Connect $ SocksAddress (SocksAddrDomainName $ BC.pack fqdn) port
 
+sendSerialized :: Serialize a => Socket -> a -> IO ()
+sendSerialized sock a = sendAll sock $ encode a
+
+waitSerialized :: Serialize a => Socket -> IO a
+waitSerialized sock = runGetDone get (getMore sock)
+
 rpc :: Command a => Socket -> a -> IO (Either SocksError (SocksHostAddress, PortNumber))
 rpc socket req = do
-    sendAll socket (encode $ toRequest req)
+    sendSerialized socket (toRequest req)
     onReply <$> runGetDone get (getMore socket)
     where onReply res@(responseReply -> reply)
                 | reply /= SocksReplySuccess = Left $ SocksError reply
