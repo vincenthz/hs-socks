@@ -75,7 +75,7 @@ connectDomainName socket fqdn port = rpc_ socket $ Connect $ SocksAddress (Socks
 rpc :: Command a => Socket -> a -> IO (Either SocksError (SocksHostAddress, PortNumber))
 rpc socket req = do
     sendAll socket (encode $ toRequest req)
-    onReply <$> runGetDone get (recv socket 4096)
+    onReply <$> runGetDone get (getMore socket)
     where onReply res@(responseReply -> reply)
                 | reply /= SocksReplySuccess = Left $ SocksError reply
                 | otherwise                  = Right (responseBindAddr res, fromIntegral $ responseBindPort res)
@@ -83,10 +83,15 @@ rpc socket req = do
 rpc_ :: Command a => Socket -> a -> IO (SocksHostAddress, PortNumber)
 rpc_ socket req = rpc socket req >>= either throwIO return
 
-runGetDone :: Show a => Get a -> IO ByteString -> IO a
+-- this function expect all the data to be consumed. this is fine for intertwined message,
+-- but might not be a good idea for multi messages from one party.
+runGetDone :: Serialize a => Get a -> IO ByteString -> IO a
 runGetDone getter ioget = ioget >>= return . runGetPartial getter >>= r where
     r (Fail s)       = error s
     r (Partial cont) = ioget >>= r . cont
     r (Done a b)
         | not $ B.null b = error "got too many bytes while receiving data"
         | otherwise      = return a
+
+getMore :: Socket -> IO ByteString
+getMore socket = recv socket 4096
