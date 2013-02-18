@@ -1,5 +1,6 @@
 module Network.Socks5.Lowlevel
     ( resolveToSockAddr
+    , socksListen
     -- * lowlevel types
     , module Network.Socks5.Wire
     , module Network.Socks5.Command
@@ -20,3 +21,9 @@ resolveToSockAddr (SocksAddress sockHostAddr port) =
         SocksAddrDomainName bs -> do he <- getHostByName (BC.unpack bs)
                                      return $ SockAddrInet port (hostAddress he)
 
+socksListen :: Socket -> IO SocksRequest
+socksListen sock = do
+    hello <- waitSerialized sock
+    case getSocksHelloMethods hello of
+        _ -> do sendSerialized sock (SocksHelloResponse SocksMethodNone)
+                waitSerialized sock
