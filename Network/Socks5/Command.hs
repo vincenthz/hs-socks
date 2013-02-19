@@ -84,9 +84,10 @@ rpc :: Command a => Socket -> a -> IO (Either SocksError (SocksHostAddress, Port
 rpc socket req = do
     sendSerialized socket (toRequest req)
     onReply <$> runGetDone get (getMore socket)
-    where onReply res@(responseReply -> reply)
-                | reply /= SocksReplySuccess = Left $ SocksError reply
-                | otherwise                  = Right (responseBindAddr res, fromIntegral $ responseBindPort res)
+    where onReply res@(responseReply -> reply) =
+                case reply of
+                    SocksReplySuccess -> Right (responseBindAddr res, fromIntegral $ responseBindPort res)
+                    SocksReplyError e -> Left e
 
 rpc_ :: Command a => Socket -> a -> IO (SocksHostAddress, PortNumber)
 rpc_ socket req = rpc socket req >>= either throwIO return

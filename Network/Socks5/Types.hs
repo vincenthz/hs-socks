@@ -52,22 +52,23 @@ data SocksAddress = SocksAddress SocksHostAddress PortNumber
 
 data SocksReply =
       SocksReplySuccess
-    | SocksReplyGeneralServerFailure
-    | SocksReplyConnectionNotAllowedByRule
-    | SocksReplyNetworkUnreachable
-    | SocksReplyHostUnreachable
-    | SocksReplyConnectionRefused
-    | SocksReplyTTLExpired
-    | SocksReplyCommandNotSupported
-    | SocksReplyAddrTypeNotSupported
-    | SocksReplyOther Word8
+    | SocksReplyError SocksError
+    deriving (Show,Eq,Ord,Data,Typeable)
+
+data SocksError =
+      SocksErrorGeneralServerFailure
+    | SocksErrorConnectionNotAllowedByRule
+    | SocksErrorNetworkUnreachable
+    | SocksErrorHostUnreachable
+    | SocksErrorConnectionRefused
+    | SocksErrorTTLExpired
+    | SocksErrorCommandNotSupported
+    | SocksErrorAddrTypeNotSupported
+    | SocksErrorOther Word8
     deriving (Show,Eq,Ord,Data,Typeable)
 
 data SocksVersionNotSupported = SocksVersionNotSupported
     deriving (Show,Data,Typeable)
-
-data SocksError = SocksError SocksReply
-    deriving (Show,Eq,Data,Typeable)
 
 instance Exception SocksError
 instance Exception SocksVersionNotSupported
@@ -98,26 +99,28 @@ instance Enum SocksMethod where
     fromEnum (SocksMethodOther w)        = fromIntegral w
     fromEnum SocksMethodNotAcceptable    = 0xff
 
+instance Enum SocksError where
+    fromEnum SocksErrorGeneralServerFailure       = 1
+    fromEnum SocksErrorConnectionNotAllowedByRule = 2
+    fromEnum SocksErrorNetworkUnreachable         = 3
+    fromEnum SocksErrorHostUnreachable            = 4
+    fromEnum SocksErrorConnectionRefused          = 5
+    fromEnum SocksErrorTTLExpired                 = 6
+    fromEnum SocksErrorCommandNotSupported        = 7
+    fromEnum SocksErrorAddrTypeNotSupported       = 8
+    fromEnum (SocksErrorOther w)                  = fromIntegral w
+    toEnum 1 = SocksErrorGeneralServerFailure
+    toEnum 2 = SocksErrorConnectionNotAllowedByRule
+    toEnum 3 = SocksErrorNetworkUnreachable
+    toEnum 4 = SocksErrorHostUnreachable
+    toEnum 5 = SocksErrorConnectionRefused
+    toEnum 6 = SocksErrorTTLExpired
+    toEnum 7 = SocksErrorCommandNotSupported
+    toEnum 8 = SocksErrorAddrTypeNotSupported
+    toEnum w = SocksErrorOther $ fromIntegral w
+
 instance Enum SocksReply where
     fromEnum SocksReplySuccess                    = 0
-    fromEnum SocksReplyGeneralServerFailure       = 1
-    fromEnum SocksReplyConnectionNotAllowedByRule = 2
-    fromEnum SocksReplyNetworkUnreachable         = 3
-    fromEnum SocksReplyHostUnreachable            = 4
-    fromEnum SocksReplyConnectionRefused          = 5
-    fromEnum SocksReplyTTLExpired                 = 6
-    fromEnum SocksReplyCommandNotSupported        = 7
-    fromEnum SocksReplyAddrTypeNotSupported       = 8
-    fromEnum (SocksReplyOther w)                  = fromIntegral w
+    fromEnum (SocksReplyError e)                  = fromEnum e
     toEnum 0 = SocksReplySuccess
-    toEnum 1 = SocksReplyGeneralServerFailure
-    toEnum 2 = SocksReplyConnectionNotAllowedByRule
-    toEnum 3 = SocksReplyNetworkUnreachable
-    toEnum 4 = SocksReplyHostUnreachable
-    toEnum 5 = SocksReplyConnectionRefused
-    toEnum 6 = SocksReplyTTLExpired
-    toEnum 7 = SocksReplyCommandNotSupported
-    toEnum 8 = SocksReplyAddrTypeNotSupported
-    toEnum w
-        | w < 256   = SocksReplyOther $ fromIntegral w
-        | otherwise = error "sock reply is only 8 bits"
+    toEnum n = SocksReplyError (toEnum n)
