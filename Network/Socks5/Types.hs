@@ -21,6 +21,9 @@ import Data.Word
 import Data.Data
 import Network.Socket (HostAddress, HostAddress6, PortNumber)
 import Control.Exception
+import qualified Data.ByteString.Char8 as BC
+import Numeric (showHex)
+import Data.List (intersperse)
 
 -- | Socks Version
 data SocksVersion = SocksVer5
@@ -45,7 +48,34 @@ data SocksHostAddress =
       SocksAddrIPV4 HostAddress
     | SocksAddrDomainName ByteString
     | SocksAddrIPV6 HostAddress6
-    deriving (Show,Eq)
+    deriving (Eq)
+
+instance Show SocksHostAddress where
+    show (SocksAddrIPV4 ha)       = "SocksAddrIPV4(" ++ showHostAddress ha ++ ")"
+    show (SocksAddrIPV6 ha6)      = "SocksAddrIPV6(" ++ showHostAddress6 ha6 ++ ")"
+    show (SocksAddrDomainName dn) = "SocksAddrDomainName(" ++ BC.unpack dn ++ ")"
+
+-- | Converts a HostAddress to a String in dot-decimal notation
+showHostAddress :: HostAddress -> String
+showHostAddress num = concat [show q1, ".", show q2, ".", show q3, ".", show q4]
+  where (num',q1)   = num `quotRem` 256
+        (num'',q2)  = num' `quotRem` 256
+        (num''',q3) = num'' `quotRem` 256
+        (_,q4)      = num''' `quotRem` 256
+
+-- | Converts a IPv6 HostAddress6 to standard hex notation
+showHostAddress6 :: HostAddress6 -> String
+showHostAddress6 (a,b,c,d) =
+    (concat . intersperse ":" . map (flip showHex ""))
+        [p1,p2,p3,p4,p5,p6,p7,p8]
+    where (a',p2) = a `quotRem` 65536
+          (_,p1)  = a' `quotRem` 65536
+          (b',p4) = b `quotRem` 65536
+          (_,p3)  = b' `quotRem` 65536
+          (c',p6) = c `quotRem` 65536
+          (_,p5)  = c' `quotRem` 65536
+          (d',p8) = d `quotRem` 65536
+          (_,p7)  = d' `quotRem` 65536
 
 data SocksAddress = SocksAddress SocksHostAddress PortNumber
     deriving (Show,Eq)
