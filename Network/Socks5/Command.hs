@@ -39,7 +39,7 @@ establish socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
 
-newtype Connect = Connect SocksAddress deriving (Show,Eq)
+newtype Connect = Connect SocksAddress deriving (Show,Eq,Ord)
 
 class Command a where
     toRequest   :: a -> SocksRequest

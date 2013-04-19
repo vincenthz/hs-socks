@@ -27,28 +27,28 @@ import Data.List (intersperse)
 
 -- | Socks Version
 data SocksVersion = SocksVer5
-                  deriving (Show,Eq)
+                  deriving (Show,Eq,Ord)
 
 data SocksCommand =
       SocksCommandConnect
     | SocksCommandBind
     | SocksCommandUdpAssociate
-    | SocksCommandOther Word8
+    | SocksCommandOther !Word8
     deriving (Show,Eq,Ord)
 
 data SocksMethod =
       SocksMethodNone
     | SocksMethodGSSAPI
     | SocksMethodUsernamePassword
-    | SocksMethodOther Word8
+    | SocksMethodOther !Word8
     | SocksMethodNotAcceptable
     deriving (Show,Eq,Ord)
 
 data SocksHostAddress =
-      SocksAddrIPV4 HostAddress
-    | SocksAddrDomainName ByteString
-    | SocksAddrIPV6 HostAddress6
-    deriving (Eq)
+      SocksAddrIPV4 !HostAddress
+    | SocksAddrDomainName !ByteString
+    | SocksAddrIPV6 !HostAddress6
+    deriving (Eq,Ord)
 
 instance Show SocksHostAddress where
     show (SocksAddrIPV4 ha)       = "SocksAddrIPV4(" ++ showHostAddress ha ++ ")"
@@ -77,8 +77,8 @@ showHostAddress6 (a,b,c,d) =
           (d',p8) = d `quotRem` 65536
           (_,p7)  = d' `quotRem` 65536
 
-data SocksAddress = SocksAddress SocksHostAddress PortNumber
-    deriving (Show,Eq)
+data SocksAddress = SocksAddress !SocksHostAddress !PortNumber
+    deriving (Show,Eq,Ord)
 
 data SocksReply =
       SocksReplySuccess
