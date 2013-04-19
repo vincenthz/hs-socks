@@ -25,6 +25,7 @@ data SocksConf = SocksConf
     { socksServer  :: SocksAddress -- ^ SOCKS Address
     , socksVersion :: SocksVersion -- ^ SOCKS version to use
     }
+    deriving (Show,Eq,Ord)
 
 -- | SOCKS Host
 socksHost :: SocksConf -> SocksHostAddress
