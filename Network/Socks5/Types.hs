@@ -29,6 +29,7 @@ import Data.List (intersperse)
 data SocksVersion = SocksVer5
                   deriving (Show,Eq,Ord)
 
+-- | Command that can be send and receive on the SOCKS protocol
 data SocksCommand =
       SocksCommandConnect
     | SocksCommandBind
@@ -36,6 +37,10 @@ data SocksCommand =
     | SocksCommandOther !Word8
     deriving (Show,Eq,Ord)
 
+-- | Authentication methods available on the SOCKS protocol.
+--
+-- Only SocksMethodNone is effectively implemented, but
+-- other value are enumerated for completeness.
 data SocksMethod =
       SocksMethodNone
     | SocksMethodGSSAPI
@@ -44,6 +49,7 @@ data SocksMethod =
     | SocksMethodNotAcceptable
     deriving (Show,Eq,Ord)
 
+-- | A Host address on the SOCKS protocol.
 data SocksHostAddress =
       SocksAddrIPV4 !HostAddress
     | SocksAddrDomainName !ByteString
@@ -77,14 +83,17 @@ showHostAddress6 (a,b,c,d) =
           (d',p8) = d `quotRem` 65536
           (_,p7)  = d' `quotRem` 65536
 
+-- | Describe a Socket address on the SOCKS protocol
 data SocksAddress = SocksAddress !SocksHostAddress !PortNumber
     deriving (Show,Eq,Ord)
 
+-- | Type of reply on the SOCKS protocol
 data SocksReply =
       SocksReplySuccess
     | SocksReplyError SocksError
     deriving (Show,Eq,Ord,Data,Typeable)
 
+-- | SOCKS error that can be received or sent
 data SocksError =
       SocksErrorGeneralServerFailure
     | SocksErrorConnectionNotAllowedByRule
@@ -97,6 +106,9 @@ data SocksError =
     | SocksErrorOther Word8
     deriving (Show,Eq,Ord,Data,Typeable)
 
+-- | Exception returned when using a SOCKS version that is not supported.
+--
+-- This package only implement version 5.
 data SocksVersionNotSupported = SocksVersionNotSupported
     deriving (Show,Data,Typeable)
 

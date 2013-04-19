@@ -1,3 +1,11 @@
+-- |
+-- Module      : Network.Socks5.Conf
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : unknown
+--
+-- typical SOCKS configuration
 module Network.Socks5.Conf
     ( SocksConf(..)
     , socksHost
