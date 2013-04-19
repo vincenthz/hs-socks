@@ -17,6 +17,7 @@ module Network.Socks5.Conf
 import Network.Socket
 import Network.Socks5.Types (SocksAddress(..), SocksHostAddress(..), SocksVersion(..))
 import qualified Data.ByteString.Char8 as BC
+import Control.DeepSeq
 
 -- | SOCKS configuration structure.
 -- this structure will be extended in future to support authentification.
@@ -26,6 +27,9 @@ data SocksConf = SocksConf
     , socksVersion :: SocksVersion -- ^ SOCKS version to use
     }
     deriving (Show,Eq,Ord)
+
+instance NFData SocksConf where
+    rnf (SocksConf s v) = s `deepseq` v `deepseq` ()
 
 -- | SOCKS Host
 socksHost :: SocksConf -> SocksHostAddress

@@ -19,6 +19,7 @@ Library
                    , bytestring
                    , cereal >= 0.3.1
                    , network >= 2.3
+                   , deepseq == 1.*
   Exposed-modules:   Network.Socks5
                      Network.Socks5.Lowlevel
                      Network.Socks5.Types

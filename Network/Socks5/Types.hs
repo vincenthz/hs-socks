@@ -24,10 +24,13 @@ import Control.Exception
 import qualified Data.ByteString.Char8 as BC
 import Numeric (showHex)
 import Data.List (intersperse)
+import Control.DeepSeq
 
 -- | Socks Version
 data SocksVersion = SocksVer5
                   deriving (Show,Eq,Ord)
+
+instance NFData SocksVersion
 
 -- | Command that can be send and receive on the SOCKS protocol
 data SocksCommand =
@@ -36,6 +39,8 @@ data SocksCommand =
     | SocksCommandUdpAssociate
     | SocksCommandOther !Word8
     deriving (Show,Eq,Ord)
+
+instance NFData SocksCommand
 
 -- | Authentication methods available on the SOCKS protocol.
 --
@@ -49,12 +54,16 @@ data SocksMethod =
     | SocksMethodNotAcceptable
     deriving (Show,Eq,Ord)
 
+instance NFData SocksMethod
+
 -- | A Host address on the SOCKS protocol.
 data SocksHostAddress =
       SocksAddrIPV4 !HostAddress
     | SocksAddrDomainName !ByteString
     | SocksAddrIPV6 !HostAddress6
     deriving (Eq,Ord)
+
+instance NFData SocksHostAddress
 
 instance Show SocksHostAddress where
     show (SocksAddrIPV4 ha)       = "SocksAddrIPV4(" ++ showHostAddress ha ++ ")"
@@ -87,11 +96,17 @@ showHostAddress6 (a,b,c,d) =
 data SocksAddress = SocksAddress !SocksHostAddress !PortNumber
     deriving (Show,Eq,Ord)
 
+instance NFData SocksAddress
+
 -- | Type of reply on the SOCKS protocol
 data SocksReply =
       SocksReplySuccess
     | SocksReplyError SocksError
     deriving (Show,Eq,Ord,Data,Typeable)
+
+instance NFData SocksReply where
+    rnf SocksReplySuccess = ()
+    rnf (SocksReplyError e) = e `deepseq` ()
 
 -- | SOCKS error that can be received or sent
 data SocksError =
@@ -106,11 +121,17 @@ data SocksError =
     | SocksErrorOther Word8
     deriving (Show,Eq,Ord,Data,Typeable)
 
+instance NFData SocksError where
+    rnf (SocksErrorOther w) = w `seq` ()
+    rnf _ = ()
+
 -- | Exception returned when using a SOCKS version that is not supported.
 --
 -- This package only implement version 5.
 data SocksVersionNotSupported = SocksVersionNotSupported
     deriving (Show,Data,Typeable)
+
+instance NFData SocksVersionNotSupported
 
 instance Exception SocksError
 instance Exception SocksVersionNotSupported
