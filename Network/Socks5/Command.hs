@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP #-}
 -- |
 -- Module      : Network.Socks5.Command
 -- License     : BSD-style
@@ -96,7 +97,11 @@ rpc_ socket req = rpc socket req >>= either throwIO return
 -- but might not be a good idea for multi messages from one party.
 runGetDone :: Serialize a => Get a -> IO ByteString -> IO a
 runGetDone getter ioget = ioget >>= return . runGetPartial getter >>= r where
+#if MIN_VERSION_cereal(0,4,0)
+    r (Fail s _)     = error s
+#else
     r (Fail s)       = error s
+#endif
     r (Partial cont) = ioget >>= r . cont
     r (Done a b)
         | not $ B.null b = error "got too many bytes while receiving data"
