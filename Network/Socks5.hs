@@ -42,13 +42,16 @@ module Network.Socks5
 import Control.Monad
 import Control.Exception
 import qualified Data.ByteString.Char8 as BC
-import Network.Socket
+import Network.Socket ( sClose, Socket, SocketType(..), SockAddr(..), Family(..)
+                      , socket, socketToHandle, connect)
 import Network.BSD
+import Network (PortID(..))
+
 import qualified Network.Socks5.Command as Cmd
 import Network.Socks5.Conf
 import Network.Socks5.Types
 import Network.Socks5.Lowlevel
-import Network
+
 import System.IO
 
 -- | connect a user specified new socket to the socks server,
