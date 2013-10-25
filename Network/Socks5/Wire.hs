@@ -49,7 +49,7 @@ getAddr 3 = SocksAddrDomainName <$> (getWord8 >>= getByteString . fromIntegral)
 getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32le getWord32le getWord32le getWord32le)
 getAddr n = error ("cannot get unknown socket address type: " ++ show n)
 
-putAddr (SocksAddrIPV4 h)         = putWord8 1 >> putWord32host h
+putAddr (SocksAddrIPV4 h)         = putWord8 1 >> putWord32le h
 putAddr (SocksAddrDomainName b)   = putWord8 3 >> putWord8 (fromIntegral $ B.length b) >> putByteString b
 putAddr (SocksAddrIPV6 (a,b,c,d)) = putWord8 4 >> mapM_ putWord32host [a,b,c,d]
 
