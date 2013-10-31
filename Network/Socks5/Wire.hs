@@ -44,7 +44,7 @@ data SocksResponse = SocksResponse
     , responseBindPort :: PortNumber
     } deriving (Show,Eq)
 
-getAddr 1 = SocksAddrIPV4 <$> getWord32be
+getAddr 1 = SocksAddrIPV4 <$> getWord32host
 getAddr 3 = SocksAddrDomainName <$> (getWord8 >>= getByteString . fromIntegral)
 getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32le getWord32le getWord32le getWord32le)
 getAddr n = error ("cannot get unknown socket address type: " ++ show n)
