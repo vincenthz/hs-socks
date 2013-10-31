@@ -62,17 +62,17 @@ instance Command Connect where
 
 connectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
 connectIPV4 socket hostaddr port = onReply <$> rpc_ socket (Connect $ SocksAddress (SocksAddrIPV4 hostaddr) port)
-    where onReply (SocksAddrIPV4 h, p) = (h, p)
-          onReply _                    = error "ipv4 requested, got something different"
+    where onReply (SocksAddress (SocksAddrIPV4 h) p) = (h, p)
+          onReply _                                  = error "ipv4 requested, got something different"
 
 connectIPV6 :: Socket -> HostAddress6 -> PortNumber -> IO (HostAddress6, PortNumber)
 connectIPV6 socket hostaddr6 port = onReply <$> rpc_ socket (Connect $ SocksAddress (SocksAddrIPV6 hostaddr6) port)
-    where onReply (SocksAddrIPV6 h, p) = (h, p)
-          onReply _                    = error "ipv6 requested, got something different"
+    where onReply (SocksAddress (SocksAddrIPV6 h) p) = (h, p)
+          onReply _                                  = error "ipv6 requested, got something different"
 
 -- TODO: FQDN should only be ascii, maybe putting a "fqdn" data type
 -- in front to make sure and make the BC.pack safe.
-connectDomainName :: Socket -> String -> PortNumber -> IO (SocksHostAddress, PortNumber)
+connectDomainName :: Socket -> String -> PortNumber -> IO SocksAddress
 connectDomainName socket fqdn port = rpc_ socket $ Connect $ SocksAddress (SocksAddrDomainName $ BC.pack fqdn) port
 
 sendSerialized :: Serialize a => Socket -> a -> IO ()
@@ -81,16 +81,16 @@ sendSerialized sock a = sendAll sock $ encode a
 waitSerialized :: Serialize a => Socket -> IO a
 waitSerialized sock = runGetDone get (getMore sock)
 
-rpc :: Command a => Socket -> a -> IO (Either SocksError (SocksHostAddress, PortNumber))
+rpc :: Command a => Socket -> a -> IO (Either SocksError SocksAddress)
 rpc socket req = do
     sendSerialized socket (toRequest req)
     onReply <$> runGetDone get (getMore socket)
     where onReply res@(responseReply -> reply) =
                 case reply of
-                    SocksReplySuccess -> Right (responseBindAddr res, fromIntegral $ responseBindPort res)
+                    SocksReplySuccess -> Right (SocksAddress (responseBindAddr res) (fromIntegral (responseBindPort res)))
                     SocksReplyError e -> Left e
 
-rpc_ :: Command a => Socket -> a -> IO (SocksHostAddress, PortNumber)
+rpc_ :: Command a => Socket -> a -> IO SocksAddress
 rpc_ socket req = rpc socket req >>= either throwIO return
 
 -- this function expect all the data to be consumed. this is fine for intertwined message,

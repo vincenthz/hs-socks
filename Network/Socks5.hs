@@ -62,7 +62,7 @@ import System.IO
 socksConnectWithSocket :: Socket       -- ^ Socket to use.
                        -> SocksConf    -- ^ SOCKS configuration for the server.
                        -> SocksAddress -- ^ SOCKS Address to connect to.
-                       -> IO (SocksHostAddress, PortNumber)
+                       -> IO SocksAddress
 socksConnectWithSocket sock serverConf destAddr = do
     serverAddr <- resolveToSockAddr (socksServer serverConf)
     connect sock serverAddr
@@ -74,7 +74,7 @@ socksConnectWithSocket sock serverConf destAddr = do
 -- server side to the 'SocksAddress' specified.
 socksConnect :: SocksConf    -- ^ SOCKS configuration for the server.
              -> SocksAddress -- ^ SOCKS Address to connect to.
-             -> IO (Socket, (SocksHostAddress, PortNumber))
+             -> IO (Socket, SocksAddress)
 socksConnect serverConf destAddr =
     getProtocolNumber "tcp" >>= \proto ->
     bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
