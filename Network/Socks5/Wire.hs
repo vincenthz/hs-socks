@@ -10,12 +10,15 @@ module Network.Socks5.Wire
     , SocksHelloResponse(..)
     , SocksRequest(..)
     , SocksResponse(..)
+    , SocksUdpEnvelope(..)
     ) where
 
 import Control.Applicative
 import Control.Monad
 import qualified Data.ByteString as B
+import Data.ByteString (ByteString)
 import Data.Serialize
+import Data.Word (Word8)
 
 import Network.Socket (PortNumber)
 
@@ -43,6 +46,9 @@ data SocksResponse = SocksResponse
     , responseBindAddr :: SocksHostAddress
     , responseBindPort :: PortNumber
     } deriving (Show,Eq)
+
+data SocksUdpEnvelope = SocksUdpEnvelope Word8 SocksAddress ByteString
+  deriving (Show,Eq)
 
 getAddr 1 = SocksAddrIPV4 <$> getWord32host
 getAddr 3 = SocksAddrDomainName <$> (getWord8 >>= getByteString . fromIntegral)
@@ -108,3 +114,20 @@ instance Serialize SocksResponse where
         putAddr $ responseBindAddr req
         putWord16be $ fromIntegral $ responseBindPort req
     get = getWord8 >>= getSocksResponse
+
+instance Serialize SocksUdpEnvelope where
+    put (SocksUdpEnvelope fragment (SocksAddress addr port) body) = do
+        putWord8 0 -- reserved
+        putWord8 0 -- reserved
+        putWord8 fragment
+        putAddr addr
+        putWord16be (fromIntegral port)
+        putByteString body
+    get = do _        <- getWord8 -- reserved
+             _        <- getWord8 -- reserved
+             fragment <- getWord8
+             addr     <- getAddr =<< getWord8
+             port     <- getWord16be
+             n        <- remaining
+             body     <- getByteString n
+             return (SocksUdpEnvelope fragment (SocksAddress addr (fromIntegral port)) body)
