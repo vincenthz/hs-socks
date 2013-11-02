@@ -51,14 +51,13 @@ instance Command SocksRequest where
     fromRequest = Just
 
 instance Command Connect where
-    toRequest (Connect (SocksAddress ha port)) = SocksRequest
+    toRequest (Connect addr) = SocksRequest
             { requestCommand  = SocksCommandConnect
-            , requestDstAddr  = ha
-            , requestDstPort  = fromIntegral port
+            , requestDst      = addr
             }
     fromRequest req
         | requestCommand req /= SocksCommandConnect = Nothing
-        | otherwise = Just $ Connect $ SocksAddress (requestDstAddr req) (requestDstPort req)
+        | otherwise = Just $ Connect $ requestDst req
 
 connectIPV4 :: Socket -> HostAddress -> PortNumber -> IO (HostAddress, PortNumber)
 connectIPV4 socket hostaddr port = onReply <$> rpc_ socket (Connect $ SocksAddress (SocksAddrIPV4 hostaddr) port)
@@ -87,7 +86,7 @@ rpc socket req = do
     onReply <$> runGetDone get (getMore socket)
     where onReply res@(responseReply -> reply) =
                 case reply of
-                    SocksReplySuccess -> Right (SocksAddress (responseBindAddr res) (fromIntegral (responseBindPort res)))
+                    SocksReplySuccess -> Right (responseBind res)
                     SocksReplyError e -> Left e
 
 rpc_ :: Command a => Socket -> a -> IO SocksAddress
