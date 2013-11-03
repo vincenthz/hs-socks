@@ -10,66 +10,101 @@ module Network.Socks5.Wire
     , SocksHelloResponse(..)
     , SocksRequest(..)
     , SocksResponse(..)
+    , SocksUdpEnvelope(..)
+    , SocksPlainLogin(..)
+    , SocksPlainResponse(..)
     ) where
 
 import Control.Applicative
 import Control.Monad
 import qualified Data.ByteString as B
+import Data.ByteString (ByteString)
 import Data.Serialize
+import Data.Word (Word8)
 
 import Network.Socket (PortNumber)
 
 import Network.Socks5.Types
 
 -- | Initial message sent by client with the list of authentification methods supported
-data SocksHello = SocksHello { getSocksHelloMethods :: [SocksMethod] }
-    deriving (Show,Eq)
+data SocksHello = SocksHello
+    { getSocksHelloMethods :: [SocksMethod]
+    } deriving (Show,Eq)
 
 -- | Initial message send by server in return from Hello, with the
 -- server chosen method of authentication
-data SocksHelloResponse = SocksHelloResponse { getSocksHelloResponseMethod :: SocksMethod }
-    deriving (Show,Eq)
+data SocksHelloResponse = SocksHelloResponse
+    { getSocksHelloResponseMethod :: SocksMethod
+    } deriving (Show,Eq)
 
 -- | Define a SOCKS requests
 data SocksRequest = SocksRequest
-    { requestCommand  :: SocksCommand
-    , requestDstAddr  :: SocksHostAddress
-    , requestDstPort  :: PortNumber
+    { requestCommand    :: SocksCommand
+    , requestDst        :: SocksAddress
     } deriving (Show,Eq)
 
 -- | Define a SOCKS response
 data SocksResponse = SocksResponse
-    { responseReply    :: SocksReply
-    , responseBindAddr :: SocksHostAddress
-    , responseBindPort :: PortNumber
+    { responseReply     :: SocksReply
+    , responseBind      :: SocksAddress
     } deriving (Show,Eq)
 
+data SocksUdpEnvelope = SocksUdpEnvelope
+    { udpFragment       :: Word8
+    , udpRemoteAddr     :: SocksAddress
+    , udpContents       :: ByteString
+    } deriving (Show,Eq)
+
+data SocksPlainLogin = SocksPlainLogin
+    { plainUsername     :: ByteString
+    , plainPassword     :: ByteString
+    } deriving (Show,Eq)
+
+data SocksPlainResponse
+    = SocksPlainLoginSuccess
+    | SocksPlainLoginFailure
+      deriving (Show,Eq)
+
+getAddr :: Word8 -> Get SocksHostAddress
 getAddr 1 = SocksAddrIPV4 <$> getWord32host
 getAddr 3 = SocksAddrDomainName <$> (getWord8 >>= getByteString . fromIntegral)
-getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32host getWord32host getWord32host getWord32host)
-getAddr n = error ("cannot get unknown socket address type: " ++ show n)
+getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32be getWord32be getWord32be getWord32be)
+getAddr n = fail ("cannot get unknown socket address type: " ++ show n)
 
+putAddr :: SocksHostAddress -> Put
 putAddr (SocksAddrIPV4 h)         = putWord8 1 >> putWord32host h
 putAddr (SocksAddrDomainName b)   = putWord8 3 >> putWord8 (fromIntegral $ B.length b) >> putByteString b
-putAddr (SocksAddrIPV6 (a,b,c,d)) = putWord8 4 >> mapM_ putWord32host [a,b,c,d]
+putAddr (SocksAddrIPV6 (a,b,c,d)) = putWord8 4 >> mapM_ putWord32be [a,b,c,d]
+
+getPort :: Get PortNumber
+getPort = fromIntegral <$> getWord16be
+
+putPort :: PortNumber -> Put
+putPort p = putWord16be (fromIntegral p)
+
+putAddress :: SocksAddress -> Put
+putAddress (SocksAddress h p) = putAddr h >> putPort p
+
+getAddress :: Get SocksAddress
+getAddress = do h <- getAddr =<< getWord8
+                p <- getPort
+                return (SocksAddress h p)
 
 getSocksRequest 5 = do
     cmd <- toEnum . fromIntegral <$> getWord8
     _   <- getWord8
-    addr <- getWord8 >>= getAddr
-    port <- fromIntegral <$> getWord16be
-    return $ SocksRequest cmd addr port
+    addr <- getAddress
+    return $ SocksRequest cmd addr
 getSocksRequest v =
-    error ("unsupported version of the protocol " ++ show v)
+    fail ("unsupported version of the protocol " ++ show v)
 
 getSocksResponse 5 = do
     reply <- toEnum . fromIntegral <$> getWord8
     _     <- getWord8
-    addr <- getWord8 >>= getAddr
-    port <- fromIntegral <$> getWord16be
-    return $ SocksResponse reply addr port
+    addr <- getAddress
+    return $ SocksResponse reply addr
 getSocksResponse v =
-    error ("unsupported version of the protocol " ++ show v)
+    fail ("unsupported version of the protocol " ++ show v)
 
 instance Serialize SocksHello where
     put (SocksHello ms) = do
@@ -79,8 +114,11 @@ instance Serialize SocksHello where
     get = do
         v <- getWord8
         case v of
-            5 -> getWord8 >>= flip replicateM (toEnum . fromIntegral <$> getWord8) . fromIntegral >>= return . SocksHello
-            _ -> error "unsupported sock hello version"
+            5 -> do n <- getWord8
+                    let getMethod = toEnum . fromIntegral <$> getWord8
+                    methods <- replicateM (fromIntegral n) getMethod
+                    return (SocksHello methods)
+            _ -> fail "unsupported sock hello version"
 
 instance Serialize SocksHelloResponse where
     put (SocksHelloResponse m) = putWord8 5 >> putWord8 (fromIntegral $ fromEnum $ m)
@@ -88,16 +126,14 @@ instance Serialize SocksHelloResponse where
         v <- getWord8
         case v of
             5 -> SocksHelloResponse . toEnum . fromIntegral <$> getWord8
-            _ -> error "unsupported sock hello response version"
+            _ -> fail "unsupported sock hello response version"
 
 instance Serialize SocksRequest where
     put req = do
         putWord8 5
         putWord8 $ fromIntegral $ fromEnum $ requestCommand req
         putWord8 0
-        putAddr $ requestDstAddr req
-        putWord16be $ fromIntegral $ requestDstPort req
-        
+        putAddress $ requestDst req
     get = getWord8 >>= getSocksRequest
 
 instance Serialize SocksResponse where
@@ -105,6 +141,46 @@ instance Serialize SocksResponse where
         putWord8 5
         putWord8 $ fromIntegral $ fromEnum $ responseReply req
         putWord8 0
-        putAddr $ responseBindAddr req
-        putWord16be $ fromIntegral $ responseBindPort req
+        putAddress $ responseBind req
     get = getWord8 >>= getSocksResponse
+
+instance Serialize SocksUdpEnvelope where
+    put (SocksUdpEnvelope fragment addr body) = do
+        putWord8 0 -- reserved
+        putWord8 0 -- reserved
+        putWord8 fragment
+        putAddress addr
+        putByteString body
+    get = do _        <- getWord8 -- reserved
+             _        <- getWord8 -- reserved
+             fragment <- getWord8
+             addr     <- getAddress
+             n        <- remaining
+             body     <- getByteString n
+             return (SocksUdpEnvelope fragment addr body)
+
+instance Serialize SocksPlainLogin where
+    put plain = do putWord8 1 -- version
+                   let putBS bs = do putWord8 (fromIntegral (B.length bs))
+                                     putByteString bs
+                   putBS (plainUsername plain)
+                   putBS (plainPassword plain)
+
+    get = do version <- getWord8
+             unless (version == 1) (fail "get{SocksPlainLogin}: Unsupported version")
+             let getBS = do len <- getWord8
+                            getByteString (fromIntegral len)
+             u <- getBS
+             p <- getBS
+             return (SocksPlainLogin u p)
+
+instance Serialize SocksPlainResponse where
+    put SocksPlainLoginSuccess = do putWord8 1 -- version
+                                    putWord8 0 -- success is zero
+    put SocksPlainLoginFailure = do putWord8 1 -- version
+                                    putWord8 1 -- failure is non-zero
+
+    get = do version <- getWord8
+             unless (version == 1) (fail "get{SocksPlainResponse}: Unsupported version")
+             response <- getWord8
+             return $! if response == 0 then SocksPlainLoginSuccess else SocksPlainLoginFailure
