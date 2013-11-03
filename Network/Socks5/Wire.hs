@@ -11,6 +11,8 @@ module Network.Socks5.Wire
     , SocksRequest(..)
     , SocksResponse(..)
     , SocksUdpEnvelope(..)
+    , SocksPlainLogin(..)
+    , SocksPlainResponse(..)
     ) where
 
 import Control.Applicative
@@ -25,28 +27,43 @@ import Network.Socket (PortNumber)
 import Network.Socks5.Types
 
 -- | Initial message sent by client with the list of authentification methods supported
-data SocksHello = SocksHello { getSocksHelloMethods :: [SocksMethod] }
-    deriving (Show,Eq)
+data SocksHello = SocksHello
+    { getSocksHelloMethods :: [SocksMethod]
+    } deriving (Show,Eq)
 
 -- | Initial message send by server in return from Hello, with the
 -- server chosen method of authentication
-data SocksHelloResponse = SocksHelloResponse { getSocksHelloResponseMethod :: SocksMethod }
-    deriving (Show,Eq)
+data SocksHelloResponse = SocksHelloResponse
+    { getSocksHelloResponseMethod :: SocksMethod
+    } deriving (Show,Eq)
 
 -- | Define a SOCKS requests
 data SocksRequest = SocksRequest
-    { requestCommand  :: SocksCommand
-    , requestDst      :: SocksAddress
+    { requestCommand    :: SocksCommand
+    , requestDst        :: SocksAddress
     } deriving (Show,Eq)
 
 -- | Define a SOCKS response
 data SocksResponse = SocksResponse
-    { responseReply    :: SocksReply
-    , responseBind     :: SocksAddress
+    { responseReply     :: SocksReply
+    , responseBind      :: SocksAddress
     } deriving (Show,Eq)
 
-data SocksUdpEnvelope = SocksUdpEnvelope Word8 SocksAddress ByteString
-  deriving (Show,Eq)
+data SocksUdpEnvelope = SocksUdpEnvelope
+    { udpFragment       :: Word8
+    , udpRemoteAddr     :: SocksAddress
+    , udpContents       :: ByteString
+    } deriving (Show,Eq)
+
+data SocksPlainLogin = SocksPlainLogin
+    { plainUsername     :: ByteString
+    , plainPassword     :: ByteString
+    } deriving (Show,Eq)
+
+data SocksPlainResponse
+    = SocksPlainLoginSuccess
+    | SocksPlainLoginFailure
+      deriving (Show,Eq)
 
 getAddr :: Word8 -> Get SocksHostAddress
 getAddr 1 = SocksAddrIPV4 <$> getWord32host
@@ -141,3 +158,29 @@ instance Serialize SocksUdpEnvelope where
              n        <- remaining
              body     <- getByteString n
              return (SocksUdpEnvelope fragment addr body)
+
+instance Serialize SocksPlainLogin where
+    put plain = do putWord8 1 -- version
+                   let putBS bs = do putWord8 (fromIntegral (B.length bs))
+                                     putByteString bs
+                   putBS (plainUsername plain)
+                   putBS (plainPassword plain)
+
+    get = do version <- getWord8
+             unless (version == 1) (fail "get{SocksPlainLogin}: Unsupported version")
+             let getBS = do len <- getWord8
+                            getByteString (fromIntegral len)
+             u <- getBS
+             p <- getBS
+             return (SocksPlainLogin u p)
+
+instance Serialize SocksPlainResponse where
+    put SocksPlainLoginSuccess = do putWord8 1 -- version
+                                    putWord8 0 -- success is zero
+    put SocksPlainLoginFailure = do putWord8 1 -- version
+                                    putWord8 1 -- failure is non-zero
+
+    get = do version <- getWord8
+             unless (version == 1) (fail "get{SocksPlainResponse}: Unsupported version")
+             response <- getWord8
+             return $! if response == 0 then SocksPlainLoginSuccess else SocksPlainLoginFailure
