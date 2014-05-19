@@ -46,12 +46,12 @@ data SocksResponse = SocksResponse
 
 getAddr 1 = SocksAddrIPV4 <$> getWord32host
 getAddr 3 = SocksAddrDomainName <$> (getWord8 >>= getByteString . fromIntegral)
-getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32host getWord32host getWord32host getWord32host)
+getAddr 4 = SocksAddrIPV6 <$> (liftM4 (,,,) getWord32be getWord32be getWord32be getWord32be)
 getAddr n = error ("cannot get unknown socket address type: " ++ show n)
 
 putAddr (SocksAddrIPV4 h)         = putWord8 1 >> putWord32host h
 putAddr (SocksAddrDomainName b)   = putWord8 3 >> putWord8 (fromIntegral $ B.length b) >> putByteString b
-putAddr (SocksAddrIPV6 (a,b,c,d)) = putWord8 4 >> mapM_ putWord32host [a,b,c,d]
+putAddr (SocksAddrIPV6 (a,b,c,d)) = putWord8 4 >> mapM_ putWord32be [a,b,c,d]
 
 getSocksRequest 5 = do
     cmd <- toEnum . fromIntegral <$> getWord8
