@@ -35,6 +35,7 @@ module Network.Socks5
     -- * Variants
     , socksConnectAddr
     , socksConnectName
+    , socksConnectTo'
     , socksConnectTo
     , socksConnectWith
     ) where
@@ -117,6 +118,13 @@ socksConnectWith socksConf desthost destport = do
         sockaddr <- resolveToSockAddr (socksServer socksConf)
         socksConnectName sock sockaddr desthost dport
         return sock
+
+-- | similar to Network connectTo but use a socks proxy with default socks configuration.
+socksConnectTo' :: String -> PortID -> String -> PortID -> IO Socket
+socksConnectTo' sockshost socksport desthost destport = do
+    sport <- resolvePortID socksport
+    let socksConf = defaultSocksConf sockshost sport
+    socksConnectWith socksConf desthost destport
 
 -- | similar to Network connectTo but use a socks proxy with default socks configuration.
 socksConnectTo :: String -> PortID -> String -> PortID -> IO Handle
