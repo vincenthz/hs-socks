@@ -20,6 +20,7 @@ import Data.Serialize
 import Network.Socket (PortNumber)
 
 import Network.Socks5.Types
+import Network.Socks5.Parse as P (anyByte, take)
 
 -- | Initial message sent by client with the list of authentification methods supported
 data SocksHello = SocksHello { getSocksHelloMethods :: [SocksMethod] }

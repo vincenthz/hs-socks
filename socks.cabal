@@ -25,6 +25,7 @@ Library
   Other-modules:     Network.Socks5.Wire
                      Network.Socks5.Conf
                      Network.Socks5.Command
+                     Network.Socks5.Parse
   ghc-options:       -Wall -fno-warn-missing-signatures -fwarn-tabs
 
 source-repository head
