@@ -188,7 +188,7 @@ take n = Parser $ \buf err ok ->
 takeWhile :: (Word8 -> Bool) -> Parser ByteString
 takeWhile predicate = Parser $ \buf err ok ->
     case B.span predicate buf of
-        (_, "")  -> runParser (getMore >> takeWhile predicate) buf err ok
+        (_, b2) | B.null b2 -> runParser (getMore >> takeWhile predicate) buf err ok
         (b1, b2) -> ok b2 b1
 
 -- | Take the remaining bytes from the current position in the stream
@@ -209,7 +209,7 @@ skip n = Parser $ \buf err ok ->
 skipWhile :: (Word8 -> Bool) -> Parser ()
 skipWhile p = Parser $ \buf err ok ->
     case B.span p buf of
-        (_, "") -> runParser (getMore >> skipWhile p) B.empty err ok
+        (_, b2) | B.null b2 -> runParser (getMore >> skipWhile p) B.empty err ok
         (_, b2) -> ok b2 ()
 
 -- | Skip all the remaining bytes from the current position in the stream
