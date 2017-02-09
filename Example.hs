@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Network.Socks5
-import Network.Socket hiding (recv)
+import Network.Socket hiding (recv, sClose)
 import Network.Socket.ByteString
 import Network.BSD
 import Network
@@ -32,10 +32,8 @@ main = do
         -- passed to socksConnectAddr
         example1 socksServerAddr destName = do
             socket <- socket AF_INET Stream defaultProtocol
-            
-            gHost <- getHostByName destName
-            let destinationAddr = SockAddrInet 80 (head $ hostAddresses gHost)
-            socksConnectAddr socket socksServerAddr destinationAddr
+            socksConnectWithSocket socket (defaultSocksConfFromSockAddr socksServerAddr)
+                        (SocksAddress (SocksAddrDomainName $ BC.pack destName) 80)
 
             sendAll socket "GET / HTTP/1.0\r\n\r\n"
             recv socket 4096 >>= putStrLn . show
