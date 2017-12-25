@@ -45,7 +45,7 @@ main = do
             socksConnectName socket socksServerAddr destName 80
             sendAll socket "GET / HTTP/1.0\r\n\r\n"
             recv socket 4096 >>= putStrLn . show
-            sClose socket
+            close socket
 
         example3 sname sport dname dport = do    
             handle <- socksConnectTo sname (PortNumber sport) dname (PortNumber dport)
