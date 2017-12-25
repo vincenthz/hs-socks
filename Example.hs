@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Network.Socks5
-import Network.Socket hiding (recv, sClose)
+import Network.Socket hiding (recv, close)
 import Network.Socket.ByteString
 import Network.BSD
 import Network
@@ -37,7 +37,7 @@ main = do
 
             sendAll socket "GET / HTTP/1.0\r\n\r\n"
             recv socket 4096 >>= putStrLn . show
-            sClose socket
+            close socket
         -- connect to @destName on port 80 through the socks server
         -- the server is doing the resolution itself
         example2 socksServerAddr destName = do
