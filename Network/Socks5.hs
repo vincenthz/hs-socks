@@ -43,7 +43,7 @@ module Network.Socks5
 import Control.Monad
 import Control.Exception
 import qualified Data.ByteString.Char8 as BC
-import Network.Socket ( sClose, Socket, SocketType(..), SockAddr(..), Family(..)
+import Network.Socket ( close, Socket, SocketType(..), SockAddr(..), Family(..)
                       , socket, socketToHandle, connect)
 import Network.BSD
 import Network (PortID(..))
@@ -78,7 +78,7 @@ socksConnect :: SocksConf    -- ^ SOCKS configuration for the server.
              -> IO (Socket, (SocksHostAddress, PortNumber))
 socksConnect serverConf destAddr =
     getProtocolNumber "tcp" >>= \proto ->
-    bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
+    bracketOnError (socket AF_INET Stream proto) close $ \sock -> do
         ret <- socksConnectWithSocket sock serverConf destAddr
         return (sock, ret)
 
@@ -114,7 +114,7 @@ socksConnectWith :: SocksConf -- ^ SOCKS configuration
 socksConnectWith socksConf desthost destport = do
     dport <- resolvePortID destport
     proto <- getProtocolNumber "tcp"
-    bracketOnError (socket AF_INET Stream proto) sClose $ \sock -> do
+    bracketOnError (socket AF_INET Stream proto) close $ \sock -> do
         sockaddr <- resolveToSockAddr (socksServer socksConf)
         socksConnectName sock sockaddr desthost dport
         return sock
