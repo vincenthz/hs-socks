@@ -18,7 +18,8 @@ Library
   Build-Depends:     base >= 3 && < 5
                    , bytestring
                    , cereal >= 0.3.1
-                   , network >= 2.4
+                   , network     >= 2.7 && < 3.1
+                   , network-bsd >= 2.7 && < 2.9
   Exposed-modules:   Network.Socks5
                      Network.Socks5.Lowlevel
                      Network.Socks5.Types
