@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP #-}
 -- |
 -- Module      : Network.Socks5
 -- License     : BSD-style
@@ -27,6 +28,9 @@ module Network.Socks5
     , SocksHostAddress(..)
     , SocksReply(..)
     , SocksError(..)
+#if MIN_VERSION_network (3,0,0)
+    , PortID(..)
+#endif
     -- * Configuration
     , module Network.Socks5.Conf
     -- * Methods
@@ -46,7 +50,6 @@ import qualified Data.ByteString.Char8 as BC
 import Network.Socket ( close, Socket, SocketType(..), SockAddr(..), Family(..)
                       , socket, socketToHandle, connect)
 import Network.BSD
-import Network (PortID(..))
 
 import qualified Network.Socks5.Command as Cmd
 import Network.Socks5.Conf
@@ -54,6 +57,18 @@ import Network.Socks5.Types
 import Network.Socks5.Lowlevel
 
 import System.IO
+
+#if MIN_VERSION_network (3,0,0)
+data PortID =
+          Service String                -- Service Name eg "ftp"
+        | PortNumber PortNumber         -- User defined Port Number
+#if !defined(mingw32_HOST_OS)
+        | UnixSocket String             -- Unix family socket in file system
+#endif
+        deriving (Show, Eq)
+#else
+import Network (PortID(..))
+#endif
 
 -- | connect a user specified new socket to the socks server,
 -- and connect the stream on the server side to the 'SockAddress' specified.
