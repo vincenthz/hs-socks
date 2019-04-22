@@ -33,30 +33,23 @@ module Network.Socks5
     , socksConnectWithSocket
     , socksConnect
     -- * Variants
-    , socksConnectAddr
     , socksConnectName
-    , socksConnectTo'
-    , socksConnectTo
-    , socksConnectWith
     ) where
 
 import Control.Monad
 import Control.Exception
 import qualified Data.ByteString.Char8 as BC
-import Network.Socket ( close, Socket, SocketType(..), SockAddr(..), Family(..)
-                      , socket, socketToHandle, connect)
-import Network.BSD
-import Network (PortID(..))
+import Network.Socket ( close, Socket, SocketType(..), Family(..)
+                      , socket, connect, PortNumber, defaultProtocol)
 
 import qualified Network.Socks5.Command as Cmd
 import Network.Socks5.Conf
 import Network.Socks5.Types
 import Network.Socks5.Lowlevel
 
-import System.IO
-
--- | connect a user specified new socket to the socks server,
--- and connect the stream on the server side to the 'SockAddress' specified.
+-- | connect a user specified new socket on the socks server to a destination
+--
+-- The socket in parameter needs to be already connected to the socks server
 --
 -- |socket|-----sockServer----->|server|----destAddr----->|destination|
 --
@@ -65,9 +58,7 @@ socksConnectWithSocket :: Socket       -- ^ Socket to use.
                        -> SocksAddress -- ^ SOCKS Address to connect to.
                        -> IO (SocksHostAddress, PortNumber)
 socksConnectWithSocket sock serverConf destAddr = do
-    serverAddr <- resolveToSockAddr (socksServer serverConf)
-    connect sock serverAddr
-    r <- Cmd.establish sock [SocksMethodNone]
+    r <- Cmd.establish (socksVersion serverConf) sock [SocksMethodNone]
     when (r == SocksMethodNotAcceptable) $ error "cannot connect with no socks method of authentication"
     Cmd.rpc_ sock (Connect destAddr)
 
@@ -77,69 +68,22 @@ socksConnect :: SocksConf    -- ^ SOCKS configuration for the server.
              -> SocksAddress -- ^ SOCKS Address to connect to.
              -> IO (Socket, (SocksHostAddress, PortNumber))
 socksConnect serverConf destAddr =
-    getProtocolNumber "tcp" >>= \proto ->
-    bracketOnError (socket AF_INET Stream proto) close $ \sock -> do
+    bracketOnError (socket AF_INET Stream defaultProtocol) close $ \sock -> do
+        connect sock (socksServer serverConf)
         ret <- socksConnectWithSocket sock serverConf destAddr
         return (sock, ret)
 
--- | connect a new socket to the socks server, and connect the stream on the server side
--- to the sockaddr specified. the sockaddr need to be SockAddrInet or SockAddrInet6.
---
--- a unix sockaddr will raises an exception.
---
--- |socket|-----sockServer----->|server|----destAddr----->|destination|
-{-# DEPRECATED socksConnectAddr "use socksConnectWithSocket" #-}
-socksConnectAddr :: Socket -> SockAddr -> SockAddr -> IO ()
-socksConnectAddr sock sockserver destaddr =
-    socksConnectWithSocket sock
-                           (defaultSocksConfFromSockAddr sockserver)
-                           (socksServer $ defaultSocksConfFromSockAddr destaddr) >>
-    return ()
-
 -- | connect a new socket to the socks server, and connect the stream to a FQDN
 -- resolved on the server side.
-socksConnectName :: Socket -> SockAddr -> String -> PortNumber -> IO ()
-socksConnectName sock sockserver destination port = do
-    socksConnectWithSocket sock
-                           (defaultSocksConfFromSockAddr sockserver)
-                           (SocksAddress (SocksAddrDomainName $ BC.pack destination) port)
-    >> return ()
-
--- | create a new socket and connect in to a destination through the specified
--- SOCKS configuration.
-socksConnectWith :: SocksConf -- ^ SOCKS configuration
-                 -> String    -- ^ destination hostname
-                 -> PortID    -- ^ destination port
-                 -> IO Socket
-socksConnectWith socksConf desthost destport = do
-    dport <- resolvePortID destport
-    proto <- getProtocolNumber "tcp"
-    bracketOnError (socket AF_INET Stream proto) close $ \sock -> do
-        sockaddr <- resolveToSockAddr (socksServer socksConf)
-        socksConnectName sock sockaddr desthost dport
-        return sock
-
--- | similar to Network connectTo but use a socks proxy with default socks configuration.
-socksConnectTo' :: String -- ^ SOCKS Server Host
-                -> PortID -- ^ SOCKS Server Port
-                -> String -- ^ Destination Host
-                -> PortID -- ^ Destination Port
-                -> IO Socket
-socksConnectTo' sockshost socksport desthost destport = do
-    sport <- resolvePortID socksport
-    let socksConf = defaultSocksConf sockshost sport
-    socksConnectWith socksConf desthost destport
-
--- | similar to Network connectTo but use a socks proxy with default socks configuration.
-socksConnectTo :: String -- ^ SOCKS Server Host
-               -> PortID -- ^ SOCKS Server Port
-               -> String -- ^ Destination Host
-               -> PortID -- ^ Destination Port
-               -> IO Handle
-socksConnectTo sockshost socksport desthost destport = do
-    sock <- socksConnectTo' sockshost socksport desthost destport
-    socketToHandle sock ReadWriteMode
-
-resolvePortID (Service serv) = getServicePortNumber serv
-resolvePortID (PortNumber n) = return n
-resolvePortID _              = error "unsupported unix PortID"
+--
+-- The socket needs to *not* be already connected.
+--
+-- The destination need to be an ASCII string, otherwise unexpected behavior will ensue.
+-- For unicode destination, punycode encoding should be used.
+socksConnectName :: Socket -> SocksConf -> String -> PortNumber -> IO ()
+socksConnectName sock sockConf destination port = do
+    connect sock (socksServer sockConf)
+    (_,_) <- socksConnectWithSocket sock sockConf addr
+    return ()
+  where
+    addr = SocksAddress (SocksAddrDomainName $ BC.pack destination) port

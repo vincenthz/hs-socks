@@ -36,8 +36,8 @@ import Network.Socket.ByteString
 import Network.Socks5.Types
 import Network.Socks5.Wire
 
-establish :: Socket -> [SocksMethod] -> IO SocksMethod
-establish socket methods = do
+establish :: SocksVersion -> Socket -> [SocksMethod] -> IO SocksMethod
+establish SocksVer5 socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
 
