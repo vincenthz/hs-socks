@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 import Network.Socks5
 import Network.Socket hiding (recv, close)
 import Network.Socket.ByteString
+import Network.Socket (close)
 import Network.BSD
-import Network
 import Data.ByteString.Char8 ()
 import qualified Data.ByteString.Char8 as BC
 
@@ -48,7 +49,7 @@ main = do
             close socket
 
         example3 sname sport dname dport = do    
-            handle <- socksConnectTo sname (PortNumber sport) dname (PortNumber dport)
+            handle <- socksConnectTo sname sport dname dport
             BC.hPut handle "GET / HTTP/1.0\r\n\r\n"
             hFlush handle
             BC.hGet handle 1024 >>= putStrLn . show

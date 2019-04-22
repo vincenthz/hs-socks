@@ -16,12 +16,14 @@ module Network.Socks5.Types
     , SocksError(..)
     ) where
 
+import qualified Basement.String as UTF8
+import           Basement.Compat.IsList
 import Data.ByteString (ByteString)
 import Data.Word
 import Data.Data
 import Network.Socket (HostAddress, HostAddress6, PortNumber)
 import Control.Exception
-import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString as B
 import Numeric (showHex)
 import Data.List (intersperse)
 
@@ -52,14 +54,20 @@ data SocksMethod =
 -- | A Host address on the SOCKS protocol.
 data SocksHostAddress =
       SocksAddrIPV4 !HostAddress
-    | SocksAddrDomainName !ByteString
+    | SocksAddrDomainName !FQDN
     | SocksAddrIPV6 !HostAddress6
     deriving (Eq,Ord)
+
+type FQDN = ByteString
 
 instance Show SocksHostAddress where
     show (SocksAddrIPV4 ha)       = "SocksAddrIPV4(" ++ showHostAddress ha ++ ")"
     show (SocksAddrIPV6 ha6)      = "SocksAddrIPV6(" ++ showHostAddress6 ha6 ++ ")"
-    show (SocksAddrDomainName dn) = "SocksAddrDomainName(" ++ BC.unpack dn ++ ")"
+    show (SocksAddrDomainName dn) = "SocksAddrDomainName(" ++ showFQDN dn ++ ")"
+
+-- | Converts a FQDN to a String
+showFQDN :: FQDN -> String
+showFQDN bs = toList $ fst $ UTF8.fromBytesLenient $ fromList $ B.unpack bs
 
 -- | Converts a HostAddress to a String in dot-decimal notation
 showHostAddress :: HostAddress -> String
