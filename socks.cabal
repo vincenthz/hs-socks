@@ -1,5 +1,5 @@
 Name:                socks
-Version:             0.5.6
+Version:             0.6.0
 Synopsis:            Socks proxy (ver 5)
 Description:         Socks proxy (version 5) implementation.
 License:             BSD3
@@ -10,7 +10,7 @@ Maintainer:          Vincent Hanquez <vincent@snarc.org>
 Build-Type:          Simple
 Category:            Network
 stability:           experimental
-Cabal-Version:       >=1.18
+Cabal-Version:       1.18
 Homepage:            http://github.com/vincenthz/hs-socks
 extra-doc-files:     README.md, Example.hs
 
