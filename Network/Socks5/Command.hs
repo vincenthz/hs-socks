@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE CPP #-}
 -- |
 -- Module      : Network.Socks5.Command
@@ -22,11 +23,11 @@ module Network.Socks5.Command
     , waitSerialized
     ) where
 
-import Control.Applicative
-import Control.Exception
+import Basement.Compat.Base
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
+import qualified Prelude
 import Data.Serialize
 
 import Network.Socket (Socket, PortNumber, HostAddress, HostAddress6)
@@ -54,7 +55,7 @@ instance Command Connect where
     toRequest (Connect (SocksAddress ha port)) = SocksRequest
             { requestCommand  = SocksCommandConnect
             , requestDstAddr  = ha
-            , requestDstPort  = fromIntegral port
+            , requestDstPort  = Prelude.fromIntegral port
             }
     fromRequest req
         | requestCommand req /= SocksCommandConnect = Nothing
@@ -72,7 +73,7 @@ connectIPV6 socket hostaddr6 port = onReply <$> rpc_ socket (Connect $ SocksAddr
 
 -- TODO: FQDN should only be ascii, maybe putting a "fqdn" data type
 -- in front to make sure and make the BC.pack safe.
-connectDomainName :: Socket -> String -> PortNumber -> IO (SocksHostAddress, PortNumber)
+connectDomainName :: Socket -> [Char] -> PortNumber -> IO (SocksHostAddress, PortNumber)
 connectDomainName socket fqdn port = rpc_ socket $ Connect $ SocksAddress (SocksAddrDomainName $ BC.pack fqdn) port
 
 sendSerialized :: Serialize a => Socket -> a -> IO ()
@@ -87,7 +88,7 @@ rpc socket req = do
     onReply <$> runGetDone get (getMore socket)
     where onReply res@(responseReply -> reply) =
                 case reply of
-                    SocksReplySuccess -> Right (responseBindAddr res, fromIntegral $ responseBindPort res)
+                    SocksReplySuccess -> Right (responseBindAddr res, Prelude.fromIntegral $ responseBindPort res)
                     SocksReplyError e -> Left e
 
 rpc_ :: Command a => Socket -> a -> IO (SocksHostAddress, PortNumber)

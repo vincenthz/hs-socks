@@ -120,18 +120,24 @@ socksConnectWith socksConf desthost destport = do
         return sock
 
 -- | similar to Network connectTo but use a socks proxy with default socks configuration.
-socksConnectTo' :: String -> PortID -> String -> PortID -> IO Socket
+socksConnectTo' :: String -- ^ SOCKS Server Host
+                -> PortID -- ^ SOCKS Server Port
+                -> String -- ^ Destination Host
+                -> PortID -- ^ Destination Port
+                -> IO Socket
 socksConnectTo' sockshost socksport desthost destport = do
     sport <- resolvePortID socksport
     let socksConf = defaultSocksConf sockshost sport
     socksConnectWith socksConf desthost destport
 
 -- | similar to Network connectTo but use a socks proxy with default socks configuration.
-socksConnectTo :: String -> PortID -> String -> PortID -> IO Handle
+socksConnectTo :: String -- ^ SOCKS Server Host
+               -> PortID -- ^ SOCKS Server Port
+               -> String -- ^ Destination Host
+               -> PortID -- ^ Destination Port
+               -> IO Handle
 socksConnectTo sockshost socksport desthost destport = do
-    sport <- resolvePortID socksport
-    let socksConf = defaultSocksConf sockshost sport
-    sock <- socksConnectWith socksConf desthost destport
+    sock <- socksConnectTo' sockshost socksport desthost destport
     socketToHandle sock ReadWriteMode
 
 resolvePortID (Service serv) = getServicePortNumber serv
