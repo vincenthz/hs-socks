@@ -9,6 +9,8 @@
 module Network.Socks5.Wire
     ( SocksHello(..)
     , SocksHelloResponse(..)
+    , SocksAuthRequest(..)
+    , SocksAuthResponse(..)
     , SocksRequest(..)
     , SocksResponse(..)
     ) where
@@ -31,6 +33,14 @@ data SocksHello = SocksHello { getSocksHelloMethods :: [SocksMethod] }
 -- server chosen method of authentication
 data SocksHelloResponse = SocksHelloResponse { getSocksHelloResponseMethod :: SocksMethod }
     deriving (Show,Eq)
+
+-- | Username/Password request used with SocksMethodUsernamePassword authentication method
+data SocksAuthRequest = SocksAuthRequest { auth :: SocksAuthUsername }
+    deriving (Show, Eq)
+
+-- | Response to an authentication request
+data SocksAuthResponse = SocksAuthResponse { authResponseReply :: SocksReply } 
+    deriving (Show, Eq)
 
 -- | Define a SOCKS requests
 data SocksRequest = SocksRequest
@@ -85,6 +95,13 @@ getSocksResponse 5 = do
 getSocksResponse v =
     error ("unsupported version of the protocol " <> show v)
 
+getAuthResponse 1 = do
+    reply <- getEnum8
+    return $ SocksAuthResponse reply
+
+getAuthResponse v =
+    error ("unsupported version of username/password subnegotiation " <> show v)
+
 instance Serialize SocksHello where
     put (SocksHello ms) = do
         putWord8 5
@@ -102,7 +119,25 @@ instance Serialize SocksHelloResponse where
         v <- getWord8
         case v of
             5 -> SocksHelloResponse <$> getEnum8
-            _ -> error "unsupported sock hello response version"
+            _ -> error ("unsupported sock hello response version " <> show v)
+
+instance Serialize SocksAuthRequest where
+    put (SocksAuthRequest (SocksAuthUsername username password)) = do
+        putWord8 1 -- this is a version of subnegotiation, not Socks protocol
+        putLength8 (B.length username)
+        putByteString username
+        putLength8 (B.length password)
+        putByteString password
+    get = do
+        username <- (getLength8 >>= getByteString)
+        password <- (getLength8 >>= getByteString)
+        return (SocksAuthRequest (SocksAuthUsername username password))
+
+instance Serialize SocksAuthResponse where
+    put (SocksAuthResponse reply) = do
+        putWord8 1
+        putEnum8 $ reply
+    get = getWord8 >>= getAuthResponse
 
 instance Serialize SocksRequest where
     put req = do

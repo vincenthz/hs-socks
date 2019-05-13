@@ -58,8 +58,8 @@ socksConnectWithSocket :: Socket       -- ^ Socket to use.
                        -> SocksAddress -- ^ SOCKS Address to connect to.
                        -> IO (SocksHostAddress, PortNumber)
 socksConnectWithSocket sock serverConf destAddr = do
-    r <- Cmd.establish (socksVersion serverConf) sock [SocksMethodNone]
-    when (r == SocksMethodNotAcceptable) $ error "cannot connect with no socks method of authentication"
+    r <- Cmd.establish (socksVersion serverConf) sock (methods serverConf)
+    Cmd.authenticate r sock (socksAuth serverConf)
     Cmd.rpc_ sock (Connect destAddr)
 
 -- | connect a new socket to a socks server and connect the stream on the
