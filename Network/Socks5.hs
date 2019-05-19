@@ -28,6 +28,7 @@ module Network.Socks5
     , SocksReply(..)
     , SocksError(..)
     , SocksAuthUsername(..)
+    , SocksVersion(..)
     -- * Configuration
     , module Network.Socks5.Conf
     -- * Methods
