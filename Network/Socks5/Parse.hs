@@ -37,7 +37,6 @@ module Network.Socks5.Parse
 
 import Control.Applicative
 import Control.Monad
-import qualified Control.Monad.Fail as Fail
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as B (toForeignPtr)
@@ -72,16 +71,14 @@ type Success a r = ByteString -> a -> Result r
 newtype Parser a = Parser
     { runParser :: forall r . ByteString -> Failure r -> Success a r -> Result r }
 
-instance Fail.MonadFail Parser where
-    fail errorMsg = Parser $ \buf err _ -> err buf ("failed: " ++ errorMsg)
-
 instance Monad Parser where
-#if !MIN_VERSION_base(4,13,0)
-    fail = Fail.fail
-#endif
     return v = Parser $ \buf _ ok -> ok buf v
     m >>= k = Parser $ \buf err ok ->
          runParser m buf err (\buf' a -> runParser (k a) buf' err ok)
+#if MIN_VERSION_base(4,13,0)
+instance MonadFail Parser where
+#endif
+    fail errorMsg = Parser $ \buf err _ -> err buf ("failed: " ++ errorMsg)
 instance MonadPlus Parser where
     mzero = fail "Parser.MonadPlus.mzero"
     mplus f g = Parser $ \buf err ok ->
