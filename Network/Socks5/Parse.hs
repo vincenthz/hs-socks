@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -71,10 +72,13 @@ newtype Parser a = Parser
     { runParser :: forall r . ByteString -> Failure r -> Success a r -> Result r }
 
 instance Monad Parser where
-    fail errorMsg = Parser $ \buf err _ -> err buf ("failed: " ++ errorMsg)
     return v = Parser $ \buf _ ok -> ok buf v
     m >>= k = Parser $ \buf err ok ->
          runParser m buf err (\buf' a -> runParser (k a) buf' err ok)
+#if MIN_VERSION_base(4,13,0)
+instance MonadFail Parser where
+#endif
+    fail errorMsg = Parser $ \buf err _ -> err buf ("failed: " ++ errorMsg)
 instance MonadPlus Parser where
     mzero = fail "Parser.MonadPlus.mzero"
     mplus f g = Parser $ \buf err ok ->
