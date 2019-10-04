@@ -11,6 +11,7 @@
 --
 module Network.Socks5.Command
     ( establish
+    , authenticate
     , Connect(..)
     , Command(..)
     , connectIPV4
@@ -40,6 +41,19 @@ establish :: SocksVersion -> Socket -> [SocksMethod] -> IO SocksMethod
 establish SocksVer5 socket methods = do
     sendAll socket (encode $ SocksHello methods)
     getSocksHelloResponseMethod <$> runGetDone get (recv socket 4096)
+
+authenticate :: SocksMethod -> Socket -> Maybe SocksAuthUsername -> IO ()
+authenticate SocksMethodNone _ _ = return ()
+authenticate SocksMethodNotAcceptable _ _ = 
+    error "cannot connect with no socks method of authentication"
+authenticate SocksMethodUsernamePassword socket Nothing = 
+    error "no auth configuration for username method"
+authenticate SocksMethodUsernamePassword socket (Just auth) = do
+    sendAll socket (encode $ SocksAuthRequest auth)
+    runGetDone get (recv socket 4096) :: IO SocksAuthResponse
+    return ()
+authenticate m _ _ = 
+    error ("authentication method not supported: " <> show m)
 
 newtype Connect = Connect SocksAddress deriving (Show,Eq,Ord)
 

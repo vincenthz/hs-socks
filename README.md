@@ -6,7 +6,7 @@ Haskell library implementation of the SOCKS 5 protocol.
 TODO
 ----
 
- * more socks authentification methods: only no authentification is supported for now.
+ * more socks authentification methods: only username/password authentification is supported for now.
  * support of socks' bind for server to client connection (like FTP).
  * add socks4a and socks4 support.
 

@@ -9,6 +9,7 @@ module Network.Socks5.Types
     ( SocksVersion(..)
     , SocksCommand(..)
     , SocksMethod(..)
+    , SocksAuthUsername(..)
     , SocksHostAddress(..)
     , SocksAddress(..)
     , SocksReply(..)
@@ -41,8 +42,8 @@ data SocksCommand =
 
 -- | Authentication methods available on the SOCKS protocol.
 --
--- Only SocksMethodNone is effectively implemented, but
--- other value are enumerated for completeness.
+-- Only SocksMethodNone and SocksMethodUsernamePassword are effectively 
+-- implemented, but other value are enumerated for completeness.
 data SocksMethod =
       SocksMethodNone
     | SocksMethodGSSAPI
@@ -50,6 +51,13 @@ data SocksMethod =
     | SocksMethodOther !Word8
     | SocksMethodNotAcceptable
     deriving (Show,Eq,Ord)
+
+-- | Authentication information for username authentication method
+data SocksAuthUsername = SocksAuthUsername
+    { socksUsername :: ByteString
+    , socksPassword :: ByteString
+    }
+    deriving (Show, Eq)
 
 -- | A Host address on the SOCKS protocol.
 data SocksHostAddress =
